@@ -35,7 +35,7 @@ class ExpenseController {
         }
     }
 
-    async findExpenseById(req, res) {
+    findExpenseById = async (req, res) => {
         try {
             const expenseId = req.params.id
             const expenseById = await expenseServices.getExpenseById(expenseId)
@@ -44,9 +44,9 @@ class ExpenseController {
             console.log(error)
             res.status(500).json({error: error.message});
         }
-    }
+    };
 
-    async monthlyExpense(req, res) {
+    monthlyExpense = async (req, res) => {
         try {
             const monthly = await expenseServices.getMonthlyExpense()
             res.status(200).json(monthly);
@@ -54,9 +54,9 @@ class ExpenseController {
             console.log(error)
             res.status(500).json({error: error.message});
         }
-    }
+    };
 
-    async getTotalAmountForAMonth(req, res) {
+    getTotalAmountForAMonth = async (req, res) => {
         try {
             const month = req.query.month;
             const totalExpensesForAMonth = await expenseServices.totalTypeSum(month);
@@ -65,10 +65,10 @@ class ExpenseController {
             console.log(error)
             res.status(500).json({error: error.message});
         }
-    }
+    };
 
 
-    async getMonthlyTransactions(req, res) {
+    getMonthlyTransactions = async (req, res) => {
         try {
             const month = req.query.month;
             const getMonthlyExpense = await expenseServices.getMonthlyTransactions(month);
@@ -77,9 +77,9 @@ class ExpenseController {
             console.log(error)
             res.status(500).json({error: error.message});
         }
-    }
+    };
 
-    async getPaymentModeForExpenseForAMonth(req, res) {
+    getPaymentModeForExpenseForAMonth = async (req, res) => {
         try {
             const month = req.query.month;
             const getMonthlyExpense = await expenseServices.getPaymentModeForExpenseForAMonth(month);
@@ -88,9 +88,9 @@ class ExpenseController {
             console.log(error)
             res.status(500).json({error: error.message});
         }
-    }
+    };
 
-    async getAllTransactionsForAMonth(req, res) {
+    getAllTransactionsForAMonth = async (req, res) => {
         try {
             const month = req.query.month;
             const getMonthlyExpense = await expenseServices.getAllTransactionsForAMonth(month);
@@ -99,7 +99,7 @@ class ExpenseController {
             console.log(error)
             res.status(500).json({error: error.message});
         }
-    }
+    };
 }
 
 

@@ -4,7 +4,7 @@ const CategoryService = require("../services/CategoryService");
 const categoryService = new CategoryService();
 
 class CategoryController {
-    async createCategory(request, response) {
+    createCategory = async (request, response) => {
         try {
             const {category} = request.body;
             const existingCategory = await categoryService.getCategoryByName(category);
@@ -13,15 +13,14 @@ class CategoryController {
                 return response.status(400).json({error: "Category already exists."});
 
             const createdCategory = await categoryService.createCategory(request);
-
             response.status(201).json({category: createdCategory.toObject({getters: true, versionKey: false})});
         } catch (error) {
             console.log(error);
             response.status(500).json({error: error.message});
         }
-    }
+    };
 
-    async getAllCategories(request, response) {
+    getAllCategories = async (request, response) => {
         try {
             const createdCategory = await categoryService.getAllCategories();
             response.status(200).json({category: createdCategory})
@@ -29,7 +28,7 @@ class CategoryController {
             console.log(error)
             response.status(500).json({error: error.message});
         }
-    }
+    };
 }
 
 module.exports = {
