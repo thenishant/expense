@@ -3,101 +3,101 @@ const ExpenseServices = require("../services/ExpensesServices");
 const expenseServices = new ExpenseServices();
 
 class ExpenseController {
-    createExpense = async (req, res) => {
+    createExpense = async (request, response) => {
         try {
-            const newExpense = await expenseServices.createNewExpense(req);
-            res.status(201).json({expense: newExpense.toObject({getters: true, versionKey: false})})
+            const newExpense = await expenseServices.createNewExpense(request);
+            response.status(201).json({expense: newExpense.toObject({getters: true, versionKey: false})})
         } catch (error) {
             console.error(error);
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     }
 
-    updateExpense = async (req, res) => {
+    updateExpense = async (request, response) => {
         try {
-            const expenseId = req.headers.id;
-            const updatedExpense = await expenseServices.updateExpense(req, expenseId);
-            res.status(200).json({expense: updatedExpense.toObject({getters: true, versionKey: false})})
+            const expenseId = request.headers.id;
+            const updatedExpense = await expenseServices.updateExpense(request, expenseId);
+            response.status(200).json({expense: updatedExpense.toObject({getters: true, versionKey: false})})
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     }
 
-    deleteExpense = async (req, res) => {
+    deleteExpense = async (request, response) => {
         try {
-            const expenseId = req.headers.id;
+            const expenseId = request.headers.id;
             const deletedExpense = await expenseServices.deleteExpense(expenseId);
             console.log(deletedExpense)
-            res.status(200).json({expense: deletedExpense})
+            response.status(200).json({expense: deletedExpense})
         } catch (error) {
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     }
 
-    findExpenseById = async (req, res) => {
+    findExpenseById = async (request, response) => {
         try {
-            const expenseId = req.params.id
+            const expenseId = request.params.id
             const expenseById = await expenseServices.getExpenseById(expenseId)
-            res.status(200).json({expenseById});
+            response.status(200).json({expenseById});
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     };
 
-    monthlyExpense = async (req, res) => {
+    monthlyExpense = async (request, response) => {
         try {
             const monthly = await expenseServices.getMonthlyExpense()
-            res.status(200).json(monthly);
+            response.status(200).json(monthly);
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     };
 
-    getTotalAmountForAMonth = async (req, res) => {
+    getTotalAmountForAMonth = async (request, response) => {
         try {
-            const month = req.query.month;
+            const month = request.query.month;
             const totalExpensesForAMonth = await expenseServices.totalTypeSum(month);
-            res.status(200).json(totalExpensesForAMonth);
+            response.status(200).json(totalExpensesForAMonth);
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     };
 
 
-    getMonthlyTransactions = async (req, res) => {
+    getMonthlyTransactions = async (request, response) => {
         try {
-            const month = req.query.month;
+            const month = request.query.month;
             const getMonthlyExpense = await expenseServices.getMonthlyTransactions(month);
-            res.status(200).json(getMonthlyExpense);
+            response.status(200).json(getMonthlyExpense);
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     };
 
-    getPaymentModeForExpenseForAMonth = async (req, res) => {
+    getPaymentModeForExpenseForAMonth = async (request, response) => {
         try {
-            const month = req.query.month;
+            const month = request.query.month;
             const getMonthlyExpense = await expenseServices.getPaymentModeForExpenseForAMonth(month);
-            res.status(200).json(getMonthlyExpense);
+            response.status(200).json(getMonthlyExpense);
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     };
 
-    getAllTransactionsForAMonth = async (req, res) => {
+    getAllTransactionsForAMonth = async (request, response) => {
         try {
-            const month = req.query.month;
+            const month = request.query.month;
             const getMonthlyExpense = await expenseServices.getAllTransactionsForAMonth(month);
-            res.status(200).json(getMonthlyExpense);
+            response.status(200).json(getMonthlyExpense);
         } catch (error) {
             console.log(error)
-            res.status(500).json({error: error.message});
+            response.status(500).json({error: error.message});
         }
     };
 }
