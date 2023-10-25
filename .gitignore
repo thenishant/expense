@@ -1,0 +1,9 @@
+.idea
+node_modules
+
+expenses.iml
+
+run.sh
+/.env.development
+/.env.production
+/.talismanrc
