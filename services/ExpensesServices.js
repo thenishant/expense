@@ -55,6 +55,7 @@ class ExpenseServices {
         const monthlyExpenses = expenses.reduce((acc, {month, amount, type}) => {
             acc[month] = acc[month] || {month, expense: 0, income: 0};
             acc[month][type === 'Expense' ? 'expense' : 'income'] += amount;
+            acc[month]['expensePercent'] = parseFloat((acc[month].expense / acc[month].income * 100).toFixed(1))
             return acc;
         }, {});
         return this.#monthsInOrder(monthlyExpenses);
