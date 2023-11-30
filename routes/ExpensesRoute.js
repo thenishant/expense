@@ -6,7 +6,6 @@ const expenseController = new ExpenseController();
 
 expenseRoute.get('/getPaymentModeForExpenseForAMonth', expenseController.getPaymentModeForExpenseForAMonth)
 expenseRoute.get('/getAllTransactionsForAMonth', expenseController.getAllTransactionsForAMonth)
-expenseRoute.get('/getTotalAmountByMonth', expenseController.getTotalAmountForAMonth)
 expenseRoute.get('/monthlyExpense', expenseController.monthlyExpense)
 expenseRoute.get('/getMonthlyTransactions', expenseController.getMonthlyTransactions)
 expenseRoute.patch('/update', expenseController.updateExpense)
