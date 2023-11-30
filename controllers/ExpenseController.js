@@ -56,18 +56,6 @@ class ExpenseController {
         }
     };
 
-    getTotalAmountForAMonth = async (request, response) => {
-        try {
-            const month = request.query.month;
-            const totalExpensesForAMonth = await expenseServices.totalTypeSum(month);
-            response.status(200).json(totalExpensesForAMonth);
-        } catch (error) {
-            console.log(error)
-            response.status(500).json({error: error.message});
-        }
-    };
-
-
     getMonthlyTransactions = async (request, response) => {
         try {
             const month = request.query.month;

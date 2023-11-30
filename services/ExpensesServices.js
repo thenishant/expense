@@ -2,22 +2,6 @@ const moment = require("moment");
 const Expense = require("../models/ExpenseModel");
 
 class ExpenseServices {
-    async totalTypeSum(month) {
-        const allExpenses = await Expense.find({month});
-        let sumOfExpense = 0;
-        let sumOfIncome = 0;
-
-        allExpenses.forEach((entry) => {
-            const {type, amount} = entry;
-            if (type === "Expense") {
-                sumOfExpense += amount;
-            } else if (type === "Income") {
-                sumOfIncome += amount;
-            }
-        });
-        const balance = sumOfIncome - sumOfExpense;
-        return {sumOfExpense, sumOfIncome, balance};
-    }
 
     async createNewExpense(req) {
         const {date, type, category, amount, desc, paymentMode} = req.body;
@@ -110,8 +94,21 @@ class ExpenseServices {
         }));
     }
 
-    getAllTransactionsForAMonth(month) {
-        return Expense.find({month});
+    async getAllTransactionsForAMonth(month) {
+        const allExpenses = await Expense.find({month});
+        let sumOfExpense = 0;
+        let sumOfIncome = 0;
+
+        allExpenses.forEach((entry) => {
+            const {type, amount} = entry;
+            if (type === "Expense") {
+                sumOfExpense += amount;
+            } else if (type === "Income") {
+                sumOfIncome += amount;
+            }
+        });
+        const balance = sumOfIncome - sumOfExpense;
+        return {sumOfExpense, sumOfIncome, balance, allExpenses}
     }
 }
 
