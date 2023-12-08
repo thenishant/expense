@@ -4,6 +4,7 @@ node_modules
 expenses.iml
 
 run.sh
-/.env.development
+/.env
 /.env.production
+/.env.development
 /.talismanrc
