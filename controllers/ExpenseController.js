@@ -8,7 +8,7 @@ class ExpenseController {
             const newExpense = await expenseServices.createNewExpense(request);
             response.status(201).json({expense: newExpense.toObject({getters: true, versionKey: false})})
         } catch (error) {
-            console.error(error);
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     }
@@ -19,7 +19,7 @@ class ExpenseController {
             const updatedExpense = await expenseServices.updateExpense(request, expenseId);
             response.status(200).json({expense: updatedExpense.toObject({getters: true, versionKey: false})})
         } catch (error) {
-            console.log(error)
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     }
@@ -31,6 +31,7 @@ class ExpenseController {
             console.log(deletedExpense)
             response.status(200).json({expense: deletedExpense})
         } catch (error) {
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     }
@@ -41,7 +42,7 @@ class ExpenseController {
             const expenseById = await expenseServices.getExpenseById(expenseId)
             response.status(200).json({expenseById});
         } catch (error) {
-            console.log(error)
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     };
@@ -51,7 +52,7 @@ class ExpenseController {
             const monthly = await expenseServices.getMonthlyExpense()
             response.status(200).json(monthly);
         } catch (error) {
-            console.log(error)
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     };
@@ -59,10 +60,10 @@ class ExpenseController {
     getMonthlyTransactions = async (request, response) => {
         try {
             const month = request.query.month;
-            const getMonthlyExpense = await expenseServices.getMonthlyTransactions(month);
-            response.status(200).json(getMonthlyExpense);
+            const getMonthlyTransactions = await expenseServices.getMonthlyTransactions(month);
+            response.status(200).json(getMonthlyTransactions);
         } catch (error) {
-            console.log(error)
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     };
@@ -70,10 +71,10 @@ class ExpenseController {
     getPaymentModeForExpenseForAMonth = async (request, response) => {
         try {
             const month = request.query.month;
-            const getMonthlyExpense = await expenseServices.getPaymentModeForExpenseForAMonth(month);
-            response.status(200).json(getMonthlyExpense);
+            const getPaymentModeForExpenseForAMonth = await expenseServices.getPaymentModeForExpenseForAMonth(month);
+            response.status(200).json(getPaymentModeForExpenseForAMonth);
         } catch (error) {
-            console.log(error)
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     };
@@ -81,16 +82,14 @@ class ExpenseController {
     getAllTransactionsForAMonth = async (request, response) => {
         try {
             const month = request.query.month;
-            const getMonthlyExpense = await expenseServices.getAllTransactionsForAMonth(month);
-            response.status(200).json(getMonthlyExpense);
+            const getAllTransactionsForAMonth = await expenseServices.getAllTransactionsForAMonth(month);
+            response.status(200).json(getAllTransactionsForAMonth);
         } catch (error) {
-            console.log(error)
+            console.error(error.stack);
             response.status(500).json({error: error.message});
         }
     };
 }
 
 
-module.exports = {
-    ExpenseController
-}
+module.exports = {ExpenseController}
