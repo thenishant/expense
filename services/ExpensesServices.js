@@ -5,7 +5,7 @@ class ExpenseServices {
 
     async createNewExpense(req) {
         const {date, type, category, amount, desc, paymentMode} = req.body;
-        const month = moment(date, 'DD/MM/YYYY').format('MMM');
+        const month = moment(date).format('MMM');
         const data = {date, type, category, amount, desc, ...((type === 'Expense' && {paymentMode}) || {}), month};
         return Expense.create(data);
     }
@@ -20,12 +20,14 @@ class ExpenseServices {
     }
 
     async updateExpense(req, expenseId) {
-        const {type, amount, desc, category} = req.body
+        const {type, amount, date, paymentMode, desc, category} = req.body
         const expense = await Expense.findById(expenseId);
         expense.type = type
         expense.category = category
         expense.amount = amount
         expense.desc = desc
+        expense.date = date
+        expense.paymentMode = paymentMode
         return await expense.save()
     }
 
@@ -89,8 +91,7 @@ class ExpenseServices {
         });
 
         return Object.keys(totalByPaymentMode).map(paymentMode => ({
-            name: paymentMode,
-            amount: totalByPaymentMode[paymentMode]
+            name: paymentMode, amount: totalByPaymentMode[paymentMode]
         }));
     }
 
