@@ -4,9 +4,13 @@ const Expense = require("../models/ExpenseModel");
 class ExpenseServices {
 
     async createNewExpense(req) {
-        const {date, type, category, amount, desc, paymentMode} = req.body;
+        let {expenseDate, type, category, amount, desc, paymentMode} = req.body;
+        let date = moment(expenseDate).format('YYYY-MM-DD')
         const month = moment(date).format('MMM');
-        const data = {date, type, category, amount, desc, ...((type === 'Expense' && {paymentMode}) || {}), month};
+        const year = moment(date).format('YYYY');
+        const data = {
+            date, type, category, amount, desc, ...((type === 'Expense' && {paymentMode}) || {}), month, year
+        };
         return Expense.create(data);
     }
 
