@@ -62,17 +62,19 @@ class ExpenseServices {
         const allExpenses = await Expense.find({month});
 
         const expensesByMonth = allExpenses.reduce((expenses, {category, amount, type}) => {
-            const categoryType = type === 'Expense' ? 'Expenses' : 'Incomes';
-            const categoryObj = expenses[categoryType][category] || {category, amount: 0};
-            categoryObj.amount += amount;
-            expenses[categoryType][category] = categoryObj;
-            expenses['sumOf' + type] += amount;
+            if (type === 'Expense' || type === 'Income') {
+                const expenseType = type === 'Expense' ? 'Expenses' : 'Incomes';
+                expenses[expenseType][category] = expenses[expenseType][category] || {
+                    category, amount: 0
+                };
+                expenses[expenseType][category].amount += amount;
+                expenses[type === 'Expense' ? 'sumOfExpense' : 'sumOfIncome'] += amount;
+            }
             return expenses;
         }, {Expenses: {}, Incomes: {}, sumOfExpense: 0, sumOfIncome: 0});
 
-        Object.values(expensesByMonth.Expenses).forEach(expense => {
-            expense.percent = ((expense.amount / expensesByMonth.sumOfExpense) * 100).toFixed(0);
-        });
+        expensesByMonth.Expenses = Object.values(expensesByMonth.Expenses);
+        expensesByMonth.Incomes = Object.values(expensesByMonth.Incomes);
 
         return {[month]: expensesByMonth};
     }
@@ -97,20 +99,19 @@ class ExpenseServices {
     }
 
     async getAllTransactionsForAMonth(month) {
-        const allExpenses = await Expense.find({month});
+        const findExpense = await Expense.find({month});
+
+        const allIncomes = findExpense.filter(entry => entry.type === "Income");
+        const allExpenses = findExpense.filter(entry => entry.type === "Expense");
         let sumOfExpense = 0;
         let sumOfIncome = 0;
 
-        allExpenses.forEach((entry) => {
+        findExpense.forEach((entry) => {
             const {type, amount} = entry;
-            if (type === "Expense") {
-                sumOfExpense += amount;
-            } else if (type === "Income") {
-                sumOfIncome += amount;
-            }
+            type === "Expense" ? sumOfExpense += amount : sumOfIncome += amount;
         });
         const balance = sumOfIncome - sumOfExpense;
-        return {sumOfExpense, sumOfIncome, balance, allExpenses}
+        return {sumOfExpense, sumOfIncome, balance, allExpenses: allExpenses, allIncomes: allIncomes}
     }
 }
 
