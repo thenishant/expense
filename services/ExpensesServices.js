@@ -62,19 +62,17 @@ class ExpenseServices {
         const allExpenses = await Expense.find({month});
 
         const expensesByMonth = allExpenses.reduce((expenses, {category, amount, type}) => {
-            if (type === 'Expense' || type === 'Income') {
-                const expenseType = type === 'Expense' ? 'Expenses' : 'Incomes';
-                expenses[expenseType][category] = expenses[expenseType][category] || {
-                    category, amount: 0
-                };
-                expenses[expenseType][category].amount += amount;
-                expenses[type === 'Expense' ? 'sumOfExpense' : 'sumOfIncome'] += amount;
-            }
+            const categoryType = type === 'Expense' ? 'Expenses' : 'Incomes';
+            const categoryObj = expenses[categoryType][category] || {category, amount: 0};
+            categoryObj.amount += amount;
+            expenses[categoryType][category] = categoryObj;
+            expenses['sumOf' + type] += amount;
             return expenses;
         }, {Expenses: {}, Incomes: {}, sumOfExpense: 0, sumOfIncome: 0});
 
-        expensesByMonth.Expenses = Object.values(expensesByMonth.Expenses);
-        expensesByMonth.Incomes = Object.values(expensesByMonth.Incomes);
+        Object.values(expensesByMonth.Expenses).forEach(expense => {
+            expense.percent = parseFloat(((expense.amount / expensesByMonth.sumOfExpense) * 100).toFixed(1));
+        });
 
         return {[month]: expensesByMonth};
     }
