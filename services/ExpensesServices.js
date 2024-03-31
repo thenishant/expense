@@ -48,14 +48,14 @@ class ExpenseServices {
             acc[month]['expensePercent'] = parseFloat((acc[month].expense / acc[month].income * 100).toFixed(1))
             return acc;
         }, {});
-        return this.#monthsInOrder(monthlyExpenses);
-    }
 
-    #monthsInOrder(monthlyExpenses) {
-        return Object.values(monthlyExpenses).sort((a, b) => {
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            return months.indexOf(a.month) - months.indexOf(b.month);
-        });
+        return Object.entries(monthlyExpenses).map(([month, data]) => ({
+            month: month,
+            year: data.year,
+            expense: data.expense,
+            income: data.income,
+            expensePercent: parseFloat((data.expense / data.income * 100).toFixed(1))
+        })).reverse();
     }
 
     async getMonthlyTransactions(month) {
