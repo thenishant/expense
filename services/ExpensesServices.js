@@ -45,6 +45,7 @@ class ExpenseServices {
         const monthlyExpenses = expenses.reduce((acc, {month, amount, type}) => {
             acc[month] = acc[month] || {month, expense: 0, income: 0};
             acc[month][type === 'Expense' ? 'expense' : 'income'] += amount;
+            acc[month]['balance'] = (acc[month].income - acc[month].expense)
             acc[month]['expensePercent'] = parseFloat((acc[month].expense / acc[month].income * 100).toFixed(1))
             return acc;
         }, {});
@@ -54,6 +55,7 @@ class ExpenseServices {
             year: data.year,
             expense: data.expense,
             income: data.income,
+            balance: data.balance,
             expensePercent: parseFloat((data.expense / data.income * 100).toFixed(1))
         })).reverse();
     }
