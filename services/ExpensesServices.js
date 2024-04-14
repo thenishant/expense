@@ -5,11 +5,11 @@ class ExpenseServices {
 
     async createNewExpense(req) {
         let {expenseDate, type, category, amount, desc, paymentMode} = req.body;
-        // let date = moment(expenseDate).format('YYYY-MM-DD')
-        const month = moment(expenseDate).format('MMM');
-        const year = moment(expenseDate).format('YYYY');
+        let date = moment(expenseDate).format()
+        const month = moment(date).format('MMM');
+        const year = moment(date).format('YYYY');
         const data = {
-            expenseDate, type, category, amount, desc, ...((type === 'Expense' && {paymentMode}) || {}), month, year
+            date, type, category, amount, desc, ...((type === 'Expense' && {paymentMode}) || {}), month, year
         };
         return Expense.create(data);
     }
