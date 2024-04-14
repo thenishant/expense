@@ -4,8 +4,8 @@ const Expense = require("../models/ExpenseModel");
 class ExpenseServices {
 
     async createNewExpense(req) {
-        let {expenseDate, type, category, amount, desc, paymentMode} = req.body;
-        let date = moment(expenseDate).format()
+        let {type, category, amount, desc, paymentMode} = req.body;
+        let date = moment(req.body.date).format()
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
         const data = {
