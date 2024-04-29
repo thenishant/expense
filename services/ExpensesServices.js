@@ -43,20 +43,21 @@ class ExpenseServices {
         const expenses = await Expense.find();
 
         const monthlyExpenses = expenses.reduce((acc, {month, amount, type}) => {
-            acc[month] = acc[month] || {month, expense: 0, income: 0};
-            acc[month][type === 'Expense' ? 'expense' : 'income'] += amount;
-            acc[month]['balance'] = (acc[month].income - acc[month].expense)
-            acc[month]['expensePercent'] = parseFloat((acc[month].expense / acc[month].income * 100).toFixed(1))
+            acc[month] = acc[month] || {month, expense: 0, income: 0, investment: 0, balance: 0};
+            acc[month][type.toLowerCase()] += amount;
+            acc[month]['balance'] = acc[month].income - (acc[month].expense + acc[month].investment);
+            acc[month]['expensePercent'] = parseFloat((acc[month].expense / acc[month].income * 100).toFixed(1));
             return acc;
         }, {});
 
-        return Object.entries(monthlyExpenses).map(([month, data]) => ({
-            month: month,
+        return Object.values(monthlyExpenses).map(data => ({
+            month: data.month,
             year: data.year,
             expense: data.expense,
             income: data.income,
+            investment: data.investment,
             balance: data.balance,
-            expensePercent: parseFloat((data.expense / data.income * 100).toFixed(1))
+            expensePercent: data.expensePercent
         })).reverse();
     }
 
@@ -64,20 +65,33 @@ class ExpenseServices {
         const allExpenses = await Expense.find({month});
 
         const expensesByMonth = allExpenses.reduce((expenses, {category, amount, type}) => {
-            const categoryType = type === 'Expense' ? 'Expenses' : 'Incomes';
+            let categoryType;
+            if (type === 'Expense') {
+                categoryType = 'Expenses';
+            } else if (type === 'Income') {
+                categoryType = 'Incomes';
+            } else {
+                categoryType = 'Investments';
+            }
             const categoryObj = expenses[categoryType][category] || {category, amount: 0};
             categoryObj.amount += amount;
             expenses[categoryType][category] = categoryObj;
             expenses['sumOf' + type] += amount;
+
             return expenses;
-        }, {Expenses: {}, Incomes: {}, sumOfExpense: 0, sumOfIncome: 0});
+        }, {Expenses: {}, Incomes: {}, Investments: {}, sumOfExpense: 0, sumOfIncome: 0, sumOfInvestment: 0});
 
         Object.values(expensesByMonth.Expenses).forEach(expense => {
             expense.percent = parseFloat(((expense.amount / expensesByMonth.sumOfExpense) * 100).toFixed(1));
         });
 
+        Object.values(expensesByMonth.Investments).forEach(investment => {
+            investment.percent = parseFloat(((investment.amount / expensesByMonth.sumOfInvestment) * 100).toFixed(1));
+        });
+
         return {[month]: expensesByMonth};
     }
+
 
     async getPaymentModeForExpenseForAMonth(month) {
         const allExpenses = await Expense.find({month});

@@ -4,7 +4,7 @@ const schema = mongoose.Schema;
 
 const expenseSchema = new schema({
     date: {type: String, required: true},
-    type: {type: String, required: true, enum: ["Expense", "Income"],},
+    type: {type: String, required: true, enum: ["Expense", "Income", "Investment"],},
     category: {type: String, required: true},
     month: {type: String, required: true},
     year: {type: String, required: true},
