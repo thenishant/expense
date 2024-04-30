@@ -10,7 +10,7 @@ const expenseSchema = new schema({
     year: {type: String, required: true},
     amount: {type: Number, required: true},
     desc: {type: String, required: true},
-    paymentMode: {type: String, enum: ["Credit Card", "Cash", "Bank Account"],}
+    paymentMode: {type: String, enum: ["Credit Card", "Cash", "Bank"],}
 })
 
 module.exports = mongoose.model('Expense', expenseSchema)
