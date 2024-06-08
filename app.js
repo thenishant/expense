@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 
 const expenseRoute = require('./routes/ExpensesRoute')
 const categoryRoute = require("./routes/CategoryRoute");
+const budgetRoute = require("./routes/BudgetRoute");
 const httpError = require('./models/HttpErrorModel')
 
 dotenv.config();
@@ -29,6 +30,7 @@ app.use((req, res, next) => {
 
 app.use('/api/expense', expenseRoute)
 app.use('/api/category', categoryRoute)
+app.use('/api/budget', budgetRoute)
 
 app.use((error, req, res, next) => {
     if (res.headerSent) {
