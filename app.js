@@ -10,11 +10,7 @@ const httpError = require('./models/HttpErrorModel')
 
 dotenv.config();
 
-if (process.env.NODE_ENV === 'production')
-    dotenv.config({path: '.env.production'});
-else
-    dotenv.config({path: '.env.development'});
-
+dotenv.config({path: `.env${process.env.NODE_ENV === 'production' ? '.production' : '.development'}`});
 const app = express();
 
 app.use(bodyParser.json())
