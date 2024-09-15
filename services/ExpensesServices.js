@@ -5,7 +5,7 @@ class ExpenseServices {
 
     async createNewExpense(req) {
         let {type, category, amount, desc, paymentMode} = req.body;
-        let date = moment(req.body.date).format()
+        let date = moment(req.body.date).format('DD-MMM-YYYY');
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
         const data = {
@@ -112,20 +112,22 @@ class ExpenseServices {
         }));
     }
 
-    async getAllTransactionsForAMonth(month) {
-        const findExpense = await Expense.find({month});
+    async getAllTransactionsForAMonth(month, year) {
+        const allTransactions = await Expense.find({month, year});
 
-        const allIncomes = findExpense.filter(entry => entry.type === "Income");
-        const allExpenses = findExpense.filter(entry => entry.type === "Expense");
-        let sumOfExpense = 0;
-        let sumOfIncome = 0;
+        const expenses = allTransactions.filter(transaction => transaction.type === "Expense");
+        const incomes = allTransactions.filter(transaction => transaction.type === "Income");
+        const investments = allTransactions.filter(transaction => transaction.type === "Investment");
 
-        findExpense.forEach((entry) => {
-            const {type, amount} = entry;
-            type === "Expense" ? sumOfExpense += amount : sumOfIncome += amount;
-        });
-        const balance = sumOfIncome - sumOfExpense;
-        return {sumOfExpense, sumOfIncome, balance, allExpenses: allExpenses, allIncomes: allIncomes}
+        const totalExpenses = expenses.reduce((sum, transaction) => sum + transaction.amount, 0);
+        const totalIncomes = incomes.reduce((sum, transaction) => sum + transaction.amount, 0);
+        const totalInvestments = investments.reduce((sum, transaction) => sum + transaction.amount, 0);
+
+        const balance = totalIncomes - totalExpenses - totalInvestments;
+
+        return {
+            totalExpenses, totalIncomes, totalInvestments, balance, expenses, incomes, investments
+        };
     }
 }
 

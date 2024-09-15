@@ -82,7 +82,8 @@ class ExpenseController {
     getAllTransactionsForAMonth = async (request, response) => {
         try {
             const month = request.query.month;
-            const getAllTransactionsForAMonth = await expenseServices.getAllTransactionsForAMonth(month);
+            const year = request.query.year;
+            const getAllTransactionsForAMonth = await expenseServices.getAllTransactionsForAMonth(month,year);
             response.status(200).json(getAllTransactionsForAMonth);
         } catch (error) {
             console.error(error.stack);
