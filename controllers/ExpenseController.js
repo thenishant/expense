@@ -68,22 +68,11 @@ class ExpenseController {
         }
     };
 
-    getPaymentModeForExpenseForAMonth = async (request, response) => {
-        try {
-            const month = request.query.month;
-            const getPaymentModeForExpenseForAMonth = await expenseServices.getPaymentModeForExpenseForAMonth(month);
-            response.status(200).json(getPaymentModeForExpenseForAMonth);
-        } catch (error) {
-            console.error(error.stack);
-            response.status(500).json({error: error.message});
-        }
-    };
-
-    getAllTransactionsForAMonth = async (request, response) => {
+    transactions = async (request, response) => {
         try {
             const month = request.query.month;
             const year = request.query.year;
-            const getAllTransactionsForAMonth = await expenseServices.getAllTransactionsForAMonth(month,year);
+            const getAllTransactionsForAMonth = await expenseServices.transactions(month, year);
             response.status(200).json(getAllTransactionsForAMonth);
         } catch (error) {
             console.error(error.stack);

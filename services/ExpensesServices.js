@@ -9,7 +9,13 @@ class ExpenseServices {
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
         const data = {
-            date, type, category, amount, desc, ...((type === 'Expense' && {paymentMode}) || {}), month, year
+            date,
+            type,
+            category,
+            amount,
+            desc, ...(((type === 'Expense' || type === 'Investment') && {paymentMode}) || {}),
+            month,
+            year
         };
         return Expense.create(data);
     }
@@ -92,41 +98,33 @@ class ExpenseServices {
         return {[month]: expensesByMonth};
     }
 
-
-    async getPaymentModeForExpenseForAMonth(month) {
-        const allExpenses = await Expense.find({month});
-        const totalByPaymentMode = {};
-
-        allExpenses.forEach(({type, paymentMode, amount}) => {
-            if (type === 'Expense') {
-                if (totalByPaymentMode[paymentMode]) {
-                    totalByPaymentMode[paymentMode] += amount;
-                } else {
-                    totalByPaymentMode[paymentMode] = amount;
-                }
-            }
-        });
-
-        return Object.keys(totalByPaymentMode).map(paymentMode => ({
-            name: paymentMode, amount: totalByPaymentMode[paymentMode]
-        }));
-    }
-
-    async getAllTransactionsForAMonth(month, year) {
+    async transactions(month, year) {
         const allTransactions = await Expense.find({month, year});
 
-        const expenses = allTransactions.filter(transaction => transaction.type === "Expense");
-        const incomes = allTransactions.filter(transaction => transaction.type === "Income");
-        const investments = allTransactions.filter(transaction => transaction.type === "Investment");
+        const transactionsByType = allTransactions.reduce((acc, transaction) => {
+            acc[transaction.type].push(transaction);
+            return acc;
+        }, {Expense: [], Income: [], Investment: []});
 
-        const totalExpenses = expenses.reduce((sum, transaction) => sum + transaction.amount, 0);
-        const totalIncomes = incomes.reduce((sum, transaction) => sum + transaction.amount, 0);
-        const totalInvestments = investments.reduce((sum, transaction) => sum + transaction.amount, 0);
+        const totals = Object.keys(transactionsByType).reduce((acc, type) => {
+            acc[type] = transactionsByType[type].reduce((sum, transaction) => sum + transaction.amount, 0);
+            return acc;
+        }, {});
 
-        const balance = totalIncomes - totalExpenses - totalInvestments;
+        const balance = totals.Income - totals.Expense - totals.Investment;
+
+        const totalByPaymentMode = {};
+
+        transactionsByType.Expense.forEach(({paymentMode, amount}) => {
+            totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
+        });
+
+        transactionsByType.Investment.forEach(({paymentMode, amount}) => {
+            totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
+        });
 
         return {
-            totalExpenses, totalIncomes, totalInvestments, balance, expenses, incomes, investments
+            ...totals, balance, transactionsByType, expenseByPaymentMode: totalByPaymentMode,
         };
     }
 }

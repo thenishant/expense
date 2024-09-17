@@ -4,8 +4,7 @@ const expenseRoute = express.Router()
 const {ExpenseController} = require("../controllers/ExpenseController");
 const expenseController = new ExpenseController();
 
-expenseRoute.get('/getPaymentModeForExpenseForAMonth', expenseController.getPaymentModeForExpenseForAMonth)
-expenseRoute.get('/getAllTransactionsForAMonth', expenseController.getAllTransactionsForAMonth)
+expenseRoute.get('/transactions', expenseController.transactions)
 expenseRoute.get('/monthlyExpense', expenseController.monthlyExpense)
 expenseRoute.get('/getMonthlyTransactions', expenseController.getMonthlyTransactions)
 expenseRoute.patch('/update', expenseController.updateExpense)
