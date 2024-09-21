@@ -49,14 +49,8 @@ class ExpenseServices {
         const moment = require('moment');
         const expenses = await Expense.find();
 
-        const currentMonth = moment();
-        const fifteenMonthsAgo = currentMonth.clone().subtract(1, 'months');
-
-        const monthlyData = expenses.reduce((acc, {month, category, amount, type}) => {
-            const monthMoment = moment(month, 'MMM');
-            if (monthMoment.isBefore(fifteenMonthsAgo)) return acc;
-
-            const monthData = acc[month] || this.initializeMonthData(month);
+        const monthlyData = expenses.reduce((acc, {month, year, category, amount, type}) => {
+            const monthData = acc[month] || this.initializeMonthData(month, year);
             monthData[type.toLowerCase()] += amount;
 
             this.updateCategory(monthData.categories, category, amount, type);
@@ -74,9 +68,10 @@ class ExpenseServices {
         return sortedMonthlyData.slice(-15).reverse();
     }
 
-    initializeMonthData(month) {
+    initializeMonthData(month, year) {
         return {
             month,
+            year,
             expense: 0,
             income: 0,
             investment: 0,
