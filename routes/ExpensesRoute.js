@@ -5,8 +5,7 @@ const {ExpenseController} = require("../controllers/ExpenseController");
 const expenseController = new ExpenseController();
 
 expenseRoute.get('/transactions', expenseController.transactions)
-expenseRoute.get('/monthlyExpense', expenseController.monthlyExpense)
-expenseRoute.get('/getMonthlyTransactions', expenseController.getMonthlyTransactions)
+expenseRoute.get('/monthlyExpense', expenseController.monthlySummary)
 expenseRoute.patch('/update', expenseController.updateExpense)
 expenseRoute.post('/create', expenseController.createExpense)
 expenseRoute.get('/:id', expenseController.findExpenseById)

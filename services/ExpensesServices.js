@@ -45,57 +45,86 @@ class ExpenseServices {
         return Expense.findById(expenseId)
     }
 
-    async getMonthlyExpense() {
+    async summary() {
+        const moment = require('moment');
         const expenses = await Expense.find();
 
-        const monthlyExpenses = expenses.reduce((acc, {month, amount, type}) => {
-            acc[month] = acc[month] || {month, expense: 0, income: 0, investment: 0, balance: 0};
-            acc[month][type.toLowerCase()] += amount;
-            acc[month]['balance'] = acc[month].income - (acc[month].expense + acc[month].investment);
-            acc[month]['expensePercent'] = parseFloat((acc[month].expense / acc[month].income * 100).toFixed(1));
+        const currentMonth = moment();
+        const fifteenMonthsAgo = currentMonth.clone().subtract(1, 'months');
+
+        const monthlyData = expenses.reduce((acc, {month, category, amount, type}) => {
+            const monthMoment = moment(month, 'MMM');
+            if (monthMoment.isBefore(fifteenMonthsAgo)) return acc;
+
+            const monthData = acc[month] || this.initializeMonthData(month);
+            monthData[type.toLowerCase()] += amount;
+
+            this.updateCategory(monthData.categories, category, amount, type);
+
+            monthData.balance = this.calculateBalance(monthData);
+            monthData.expensePercent = this.calculateExpensePercent(monthData);
+
+            acc[month] = monthData;
             return acc;
         }, {});
 
-        return Object.values(monthlyExpenses).map(data => ({
-            month: data.month,
-            year: data.year,
-            expense: data.expense,
-            income: data.income,
-            investment: data.investment,
-            balance: data.balance,
-            expensePercent: data.expensePercent
-        })).reverse();
+        this.calculateCategoryPercentages(monthlyData);
+        const sortedMonthlyData = Object.values(monthlyData).sort((a, b) => moment(a.month, 'MMM').diff(moment(b.month, 'MMM')));
+
+        return sortedMonthlyData.slice(-15).reverse();
     }
 
-    async getMonthlyTransactions(month) {
-        const allExpenses = await Expense.find({month});
+    initializeMonthData(month) {
+        return {
+            month,
+            expense: 0,
+            income: 0,
+            investment: 0,
+            balance: 0,
+            expensePercent: null,
+            categories: {Expenses: {}, Incomes: {}, Investments: {}}
+        };
+    }
 
-        const expensesByMonth = allExpenses.reduce((expenses, {category, amount, type}) => {
-            let categoryType;
-            if (type === 'Expense') {
-                categoryType = 'Expenses';
-            } else if (type === 'Income') {
-                categoryType = 'Incomes';
-            } else {
-                categoryType = 'Investments';
-            }
-            const categoryObj = expenses[categoryType][category] || {category, amount: 0};
-            categoryObj.amount += amount;
-            expenses[categoryType][category] = categoryObj;
-            expenses['sumOf' + type] += amount;
+    updateCategory(categories, category, amount, type) {
+        let categoryType;
+        if (type === 'Expense') {
+            categoryType = 'Expenses';
+        } else if (type === 'Income') {
+            categoryType = 'Incomes';
+        } else {
+            categoryType = 'Investments';
+        }
 
-            return expenses;
-        }, {Expenses: {}, Incomes: {}, Investments: {}, sumOfExpense: 0, sumOfIncome: 0, sumOfInvestment: 0});
+        const categoryObj = categories[categoryType][category] || {category, amount: 0};
+        categoryObj.amount += amount;
+        categories[categoryType][category] = categoryObj;
+    }
 
-        Object.values(expensesByMonth.Expenses).forEach(expense => {
-            expense.percent = parseFloat(((expense.amount / expensesByMonth.sumOfExpense) * 100).toFixed(1));
+    calculateBalance(monthData) {
+        return monthData.income - (monthData.expense + monthData.investment);
+    }
+
+    calculateExpensePercent(monthData) {
+        if (monthData.income > 0) {
+            return parseFloat(((monthData.expense / monthData.income) * 100).toFixed(1));
+        }
+        return null;
+    }
+
+    calculateCategoryPercentages(monthlyData) {
+        Object.values(monthlyData).forEach(monthData => {
+            const sumOfExpense = Object.values(monthData.categories.Expenses).reduce((sum, expense) => sum + expense.amount, 0);
+            const sumOfInvestment = Object.values(monthData.categories.Investments).reduce((sum, investment) => sum + investment.amount, 0);
+
+            Object.values(monthData.categories.Expenses).forEach(expense => {
+                expense.percent = sumOfExpense > 0 ? parseFloat(((expense.amount / sumOfExpense) * 100).toFixed(1)) : null;
+            });
+
+            Object.values(monthData.categories.Investments).forEach(investment => {
+                investment.percent = sumOfInvestment > 0 ? parseFloat(((investment.amount / sumOfInvestment) * 100).toFixed(1)) : null;
+            });
         });
-
-        Object.values(expensesByMonth.Investments).forEach(investment => {
-            investment.percent = parseFloat(((investment.amount / expensesByMonth.sumOfInvestment) * 100).toFixed(1));
-        });
-
-        return {[month]: expensesByMonth};
     }
 
     async transactions(month, year) {
