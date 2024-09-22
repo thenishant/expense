@@ -49,108 +49,65 @@ class ExpenseServices {
         const moment = require('moment');
         const expenses = await Expense.find();
 
-        const monthlyData = expenses.reduce((acc, {month, year, category, amount, type}) => {
-            const monthData = acc[month] || this.initializeMonthData(month, year);
-            monthData[type.toLowerCase()] += amount;
+        const monthlyData = expenses.reduce((acc, {month, year, amount, type}) => {
+            if (!acc[month]) {
+                acc[month] = {month, year, expense: 0, income: 0, investment: 0};
+            }
 
-            this.updateCategory(monthData.categories, category, amount, type);
+            acc[month][type.toLowerCase()] += amount;
+            acc[month].balance = acc[month].income - (acc[month].expense + acc[month].investment);
+            acc[month].expensePercent = acc[month].income > 0 ? parseFloat(((acc[month].expense / acc[month].income) * 100).toFixed(1)) : null;
 
-            monthData.balance = this.calculateBalance(monthData);
-            monthData.expensePercent = this.calculateExpensePercent(monthData);
-
-            acc[month] = monthData;
             return acc;
         }, {});
 
-        this.calculateCategoryPercentages(monthlyData);
-        const sortedMonthlyData = Object.values(monthlyData).sort((a, b) => moment(a.month, 'MMM').diff(moment(b.month, 'MMM')));
-
-        return sortedMonthlyData.slice(-15).reverse();
-    }
-
-    initializeMonthData(month, year) {
-        return {
-            month,
-            year,
-            expense: 0,
-            income: 0,
-            investment: 0,
-            balance: 0,
-            expensePercent: null,
-            categories: {Expenses: {}, Incomes: {}, Investments: {}}
-        };
-    }
-
-    updateCategory(categories, category, amount, type) {
-        let categoryType;
-        if (type === 'Expense') {
-            categoryType = 'Expenses';
-        } else if (type === 'Income') {
-            categoryType = 'Incomes';
-        } else {
-            categoryType = 'Investments';
-        }
-
-        const categoryObj = categories[categoryType][category] || {category, amount: 0};
-        categoryObj.amount += amount;
-        categories[categoryType][category] = categoryObj;
-    }
-
-    calculateBalance(monthData) {
-        return monthData.income - (monthData.expense + monthData.investment);
-    }
-
-    calculateExpensePercent(monthData) {
-        if (monthData.income > 0) {
-            return parseFloat(((monthData.expense / monthData.income) * 100).toFixed(1));
-        }
-        return null;
-    }
-
-    calculateCategoryPercentages(monthlyData) {
-        Object.values(monthlyData).forEach(monthData => {
-            const sumOfExpense = Object.values(monthData.categories.Expenses).reduce((sum, expense) => sum + expense.amount, 0);
-            const sumOfInvestment = Object.values(monthData.categories.Investments).reduce((sum, investment) => sum + investment.amount, 0);
-
-            Object.values(monthData.categories.Expenses).forEach(expense => {
-                expense.percent = sumOfExpense > 0 ? parseFloat(((expense.amount / sumOfExpense) * 100).toFixed(1)) : null;
-            });
-
-            Object.values(monthData.categories.Investments).forEach(investment => {
-                investment.percent = sumOfInvestment > 0 ? parseFloat(((investment.amount / sumOfInvestment) * 100).toFixed(1)) : null;
-            });
-        });
+        return Object.values(monthlyData)
+            .sort((a, b) => moment(a.month, 'MMM').diff(moment(b.month, 'MMM')))
+            .slice(-12)
+            .reverse();
     }
 
     async transactions(month, year) {
+        if (!month || !year) {
+            throw new Error('month and year are required');
+        }
+
         const allTransactions = await Expense.find({month, year});
+        const transactions = {Expense: [], Income: [], Investment: []};
+        const totalByPaymentMode = {};
 
-        const transactionsByType = allTransactions.reduce((acc, transaction) => {
-            acc[transaction.type].push(transaction);
-            return acc;
-        }, {Expense: [], Income: [], Investment: []});
+        allTransactions.forEach((transaction) => {
+            const {type, paymentMode, amount} = transaction;
+            transactions[type].push(transaction);
 
-        const totals = Object.keys(transactionsByType).reduce((acc, type) => {
-            acc[type] = transactionsByType[type].reduce((sum, transaction) => sum + transaction.amount, 0);
+            if (type === 'Expense' || type === 'Investment') {
+                totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
+            }
+        });
+
+        return {transactions, paymentMode: totalByPaymentMode};
+    }
+
+    async transactionsCategory(month, year) {
+        const transactions = await Expense.find({month, year});
+
+        const expenses = transactions.filter((transaction) => transaction.type === 'Expense' && transaction.month === month && transaction.year === year);
+
+        const groupedExpenses = expenses.reduce((acc, expense) => {
+            acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
             return acc;
         }, {});
 
-        const balance = totals.Income - totals.Expense - totals.Investment;
+        const totalExpense = Object.values(groupedExpenses).reduce((total, amount) => total + amount, 0);
 
-        const totalByPaymentMode = {};
-
-        transactionsByType.Expense.forEach(({paymentMode, amount}) => {
-            totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
+        return Object.entries(groupedExpenses).map(([category, amount]) => {
+            let percentage = `${((amount / totalExpense) * 100).toFixed(1)}%`;
+            return ({
+                Category: category, Amount: amount, Percentage: percentage
+            });
         });
-
-        transactionsByType.Investment.forEach(({paymentMode, amount}) => {
-            totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
-        });
-
-        return {
-            ...totals, balance, transactionsByType, expenseByPaymentMode: totalByPaymentMode,
-        };
     }
+
 }
 
 module.exports = ExpenseServices
