@@ -103,7 +103,7 @@ class ExpenseServices {
         return Object.entries(groupedExpenses).map(([category, amount]) => {
             let percentage = `${((amount / totalExpense) * 100).toFixed(1)}%`;
             return ({
-                Category: category, Amount: amount, Percentage: percentage
+                category: category, amount: amount, percentage: percentage
             });
         });
     }
