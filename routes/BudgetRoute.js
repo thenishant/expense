@@ -4,6 +4,6 @@ const budgetRoute = express.Router()
 
 const budgetController = new BudgetController();
 budgetRoute.post('/create', budgetController.createBudget)
-budgetRoute.get('/allBudget', budgetController.getAllBudgetForAMonth)
+budgetRoute.get('/budgets', budgetController.getAllBudgetForAMonth)
 
 module.exports = budgetRoute
