@@ -5,7 +5,7 @@ class ExpenseServices {
 
     async createNewExpense(req) {
         let {type, category, amount, desc, paymentMode} = req.body;
-        let date = new Date();
+        let date = moment(req.body.date).format('YYYY-MM-DD');
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
         const data = {
