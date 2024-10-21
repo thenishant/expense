@@ -15,7 +15,8 @@ class BudgetController {
     getAllBudgetForAMonth = async (request, response) => {
         try {
             const month = request.query.month;
-            const getAllBudget = await budgetServices.getAllBudgetForAMonth(month);
+            const year = request.query.year;
+            const getAllBudget = await budgetServices.getAllBudgetForAMonth(month, year);
             response.status(200).json(getAllBudget);
         } catch (error) {
             console.error(error.stack);

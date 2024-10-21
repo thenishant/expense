@@ -14,8 +14,8 @@ class BudgetServices {
         return Budget.create(data);
     }
 
-    async getAllBudgetForAMonth(month) {
-        return Budget.find({month});
+    async getAllBudgetForAMonth(month, year) {
+        return Budget.find({month, year});
     }
 }
 
