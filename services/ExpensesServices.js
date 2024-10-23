@@ -9,13 +9,7 @@ class ExpenseServices {
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
         const data = {
-            date,
-            type,
-            category,
-            amount,
-            desc, ...(((type === 'Expense' || type === 'Investment') && {paymentMode}) || {}),
-            month,
-            year
+            date, type, category, amount, desc, ...(type === 'Expense' ? {paymentMode} : {}), month, year
         };
         return Expense.create(data);
     }
