@@ -4,12 +4,12 @@ const Expense = require("../models/ExpenseModel");
 class ExpenseServices {
 
     async createNewExpense(req) {
-        let {type, category, amount, desc, paymentMode} = req.body;
+        let {type, category, subCategory, amount, desc, paymentMode} = req.body;
         let date = moment(req.body.date).format('YYYY-MM-DD');
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
         const data = {
-            date, type, category, amount, desc, ...(type === 'Expense' ? {paymentMode} : {}), month, year
+            date, type, category, subCategory, amount, desc, ...(type === 'Expense' ? {paymentMode} : {}), month, year
         };
         return Expense.create(data);
     }
@@ -24,10 +24,11 @@ class ExpenseServices {
     }
 
     async updateExpense(req, expenseId) {
-        const {type, amount, date, paymentMode, desc, category} = req.body
+        const {type, amount, date, paymentMode, desc, category, subCategory} = req.body
         const expense = await Expense.findById(expenseId);
         expense.type = type
         expense.category = category
+        expense.subCategory = subCategory
         expense.amount = amount
         expense.desc = desc
         expense.date = date
