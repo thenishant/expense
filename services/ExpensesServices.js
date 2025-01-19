@@ -44,6 +44,7 @@ class ExpenseServices {
         const moment = require('moment');
         const expenses = await Expense.find();
 
+        // Return an empty array if no expenses are found
         if (!expenses || expenses.length === 0) {
             console.log("No expenses found for the current month and year.");
             return [];
@@ -54,17 +55,14 @@ class ExpenseServices {
             if (!month || !year) return acc;  // Skip if month or year is missing
 
             if (!acc[month]) {
-                acc[month] = {month, year, expense: 0, income: 0, investment: 0};
+                acc[month] = {month, year, expense: 0, income: 0, investment: 0, balance: 0, expensePercent: null};
             }
 
             acc[month][type.toLowerCase()] += amount;
-
             acc[month].balance = acc[month].income - (acc[month].expense + acc[month].investment);
             acc[month].expensePercent = acc[month].income > 0 ? parseFloat(((acc[month].expense / acc[month].income) * 100).toFixed(1)) : null;
-
             return acc;
         }, {});
-
 
         // Convert aggregated data to an array and sort it by month and year
         const sortedMonthlyData = Object.values(monthlyData)
@@ -74,8 +72,9 @@ class ExpenseServices {
                 return moment(a.month, 'MMM').diff(moment(b.month, 'MMM'));
             });
 
-        // Return the sorted data (last 12 months, reversed)
-        return sortedMonthlyData.slice(-12).reverse();
+        // Calculate overall account balance
+        const accountBalance = sortedMonthlyData.reduce((total, {balance}) => total + balance, 0);
+        return {data: sortedMonthlyData, accountBalance};
     }
 
     async transactions(month, year) {
