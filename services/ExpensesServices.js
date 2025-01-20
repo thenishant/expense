@@ -75,7 +75,9 @@ class ExpenseServices {
         // Calculate overall account balance
         const accountBalance = sortedMonthlyData.reduce((total, {balance}) => total + balance, 0);
         const mobileAccountBalance = 0
-        return {data: sortedMonthlyData, accountBalance, mobileAccountBalance};
+        const effectiveBalance = accountBalance + mobileAccountBalance;
+        const balances = {accountBalance, mobileAccountBalance, effectiveBalance}
+        return {data: sortedMonthlyData, ...balances};
     }
 
     async transactions(month, year) {
