@@ -47,13 +47,13 @@ class ExpenseController {
         }
     };
 
-    monthlySummary = async (request, response) => {
+    monthlySummary = async (req, res) => {
         try {
-            const monthly = await expenseServices.summary()
-            response.status(200).json(monthly);
+            const result = await expenseServices.getMonthlySummary(475000);
+            res.status(200).json(result);
         } catch (error) {
             console.error(error.stack);
-            response.status(500).json({error: error.message});
+            res.status(500).json({error: error.message});
         }
     };
 

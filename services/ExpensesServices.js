@@ -41,65 +41,63 @@ class ExpenseServices {
         return Expense.findById(expenseId);
     }
 
-    async summary() {
+    async getMonthlySummary(initialOpeningBalance = 0) {
         const expenses = await Expense.find();
-        if (!expenses || expenses.length === 0) {
-            return [];
-        }
+        if (!expenses?.length) return [];
 
-        const monthlyData = this.#aggregateMonthlyData(expenses);
-        const sortedMonthlyData = this.#sortMonthlyData(monthlyData);
-        const updatedMonthlyData = this.#addOpeningAndClosingBalances(sortedMonthlyData, 500000);
-        const balances = this.#calculateBalances(updatedMonthlyData);
+        const grouped = this.#groupByMonth(expenses);
+        const sorted = this.#sortByDate(grouped);
+        const withBalances = this.#applyMonthlyBalances(sorted, initialOpeningBalance);
+        const totals = this.#calculateOverallBalances(withBalances);
 
-        return {data: updatedMonthlyData, ...balances};
+        return {data: withBalances, ...totals};
     }
 
-    #aggregateMonthlyData(expenses) {
+    #groupByMonth(expenses) {
         return expenses.reduce((acc, {month, year, amount, type}) => {
             if (!month || !year) return acc;
-
             const key = `${year}-${month}`;
-            if (!acc[key]) {
-                acc[key] = {
-                    month, year, expense: 0, income: 0, investment: 0, balance: 0, expensePercent: null,
-                };
+
+            acc[key] ??= {month, year, expense: 0, income: 0, investment: 0, balance: 0, expensePercent: null};
+
+            const current = acc[key];
+            const lowerType = type.toLowerCase();
+
+            if (["expense", "income", "investment"].includes(lowerType)) {
+                current[lowerType] += amount;
             }
 
-            const item = acc[key];
-            item[type.toLowerCase()] += amount;
-            item.balance = item.income - (item.expense + item.investment);
-            item.expensePercent = item.income > 0 ? parseFloat(((item.expense / item.income) * 100).toFixed(1)) : null;
+            current.balance = current.income - (current.expense + current.investment);
+            current.expensePercent = current.income > 0 ? parseFloat(((current.expense / current.income) * 100).toFixed(1)) : null;
 
             return acc;
         }, {});
     }
 
-    #sortMonthlyData(monthlyData) {
-        return Object.values(monthlyData).sort((a, b) => {
+    #sortByDate(data) {
+        return Object.values(data).sort((a, b) => {
             const dateA = new Date(`${a.year}-${a.month}-01`);
             const dateB = new Date(`${b.year}-${b.month}-01`);
             return dateA - dateB;
         });
     }
 
-    #addOpeningAndClosingBalances(sortedMonthlyData, initialOpeningBalance) {
-        let currentOpeningBalance = initialOpeningBalance;
+    #applyMonthlyBalances(data, openingBalance) {
+        let balance = openingBalance;
 
-        for (const monthData of sortedMonthlyData) {
-            const closingBalance = currentOpeningBalance + monthData.balance;
-            monthData.openingBalance = currentOpeningBalance;
-            monthData.closingBalance = closingBalance;
-            currentOpeningBalance = closingBalance;
-        }
-
-        return sortedMonthlyData;
+        return data.map(month => {
+            const closing = balance + month.balance;
+            const result = {
+                ...month, openingBalance: balance, closingBalance: closing
+            };
+            balance = closing;
+            return result;
+        });
     }
 
-    #calculateBalances(sortedMonthlyData) {
-        const latestClosingBalance = sortedMonthlyData.at(-1)?.closingBalance || 0;
-        const accountBalance = sortedMonthlyData.reduce((total, {balance}) => total + balance, 0);
-        const mobileAccountBalance = latestClosingBalance;
+    #calculateOverallBalances(data) {
+        const accountBalance = data.reduce((sum, m) => sum + m.balance, 0);
+        const mobileAccountBalance = data.at(-1)?.closingBalance || 0;
         const effectiveBalance = accountBalance + mobileAccountBalance;
 
         return {accountBalance, mobileAccountBalance, effectiveBalance};
