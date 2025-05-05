@@ -1,22 +1,15 @@
+const moment = require("moment");
 const Expense = require("../models/ExpenseModel");
 
 class ExpenseServices {
 
     async createNewExpense(req) {
         let {type, category, subCategory, amount, desc, paymentMode} = req.body;
-        const dateObj = new Date(req.body.date);
-        const month = dateObj.toLocaleString('default', {month: 'short'}); // "Jan", "Feb", etc.
-        const year = dateObj.getFullYear().toString();
-
+        let date = moment(req.body.date).format('YYYY-MM-DD');
+        const month = moment(date).format('MMM');
+        const year = moment(date).format('YYYY');
         const data = {
-            date: dateObj.toISOString().split('T')[0], ...(type === 'Expense' ? {paymentMode} : {}),
-            type,
-            category,
-            subCategory,
-            amount,
-            desc,
-            month,
-            year,
+            date, type, category, subCategory, amount, desc, ...(type === 'Expense' ? {paymentMode} : {}), month, year
         };
         return Expense.create(data);
     }
@@ -113,14 +106,18 @@ class ExpenseServices {
     }
 
     async transactions(month, year) {
-        if (!month || !year) throw new Error('month and year are required');
+        if (!month || !year) {
+            throw new Error('month and year are required');
+        }
 
         const allTransactions = await Expense.find({month, year});
         const transactions = {Expense: [], Income: [], Investment: []};
         const totalByPaymentMode = {};
 
-        allTransactions.forEach(({type, paymentMode, amount}) => {
-            transactions[type].push({type, paymentMode, amount});
+        allTransactions.forEach((transaction) => {
+            const {type, paymentMode, amount} = transaction;
+            transactions[type].push(transaction);
+
             if (type === 'Expense' || type === 'Investment') {
                 totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
             }
