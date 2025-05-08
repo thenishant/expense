@@ -4,7 +4,7 @@ const investmentSchema = new mongoose.Schema({
     month: {type: String, required: true},
     year: {type: String, required: true},
     income: {type: Number, required: true},
-    percent: {type: Number, required: true},
+    investmentPercent: {type: Number, required: true},
     suggestedInvestment: {type: Number, required: true}
 });
 

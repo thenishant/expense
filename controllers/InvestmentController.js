@@ -2,13 +2,23 @@ const InvestmentServices = require("../services/InvestmentService");
 const investmentServices = new InvestmentServices();
 
 class InvestmentController {
-    createInvestmentPlan = async (request, response) => {
+    async createInvestmentPlan(req, res) {
         try {
-            const newPlan = await investmentServices.createNewInvestmentPlan(request, response);
-            response.status(201).json({investment: newPlan.toObject({getters: true, versionKey: false})})
+            const plan = await investmentServices.createNewInvestmentPlan(req.body);
+            res.status(200).json(plan);
         } catch (error) {
             console.error(error.stack);
-            response.status(500).json({error: error.message});
+            res.status(400).json({error: error.message});
+        }
+    }
+
+    async getInvestmentPlans(req, res) {
+        try {
+            const plans = await investmentServices.getAllInvestmentPlans();
+            res.status(200).json(plans);
+        } catch (error) {
+            console.error(error.stack);
+            res.status(500).json({error: error.message});
         }
     }
 }
