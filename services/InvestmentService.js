@@ -25,7 +25,20 @@ class InvestmentServices {
     }
 
     async getAllInvestmentPlans() {
-        return Investment.find().lean();
+        const monthOrder = {
+            Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+        };
+
+        const plans = await Investment.find().lean();
+        if (!plans.length) return [];
+
+        plans.sort((a, b) => {
+            const yearDiff = parseInt(b.year) - parseInt(a.year);
+            if (yearDiff !== 0) return yearDiff;
+            return monthOrder[b.month] - monthOrder[a.month];
+        });
+
+        return plans;
     }
 }
 
