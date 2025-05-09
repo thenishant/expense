@@ -1,5 +1,6 @@
 const Investment = require('../models/InvestmentModel');
 const ExpenseServices = require("./ExpensesServices");
+const {EXPENSES} = require("../constants/constants");
 const expenseServices = new ExpenseServices();
 
 class InvestmentServices {
@@ -10,7 +11,7 @@ class InvestmentServices {
             throw new Error("month, year, and percent are required");
         }
 
-        const summary = await expenseServices.getMonthlySummary(500000);
+        const summary = await expenseServices.getMonthlySummary(EXPENSES.BALANCE, year);
         const dataForMonth = summary.data.find(entry => entry.month === month && entry.year === year);
 
         if (!dataForMonth || dataForMonth.income === 0) {

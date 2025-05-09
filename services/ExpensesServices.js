@@ -41,13 +41,14 @@ class ExpenseServices {
         return Expense.findById(expenseId);
     }
 
-    async getMonthlySummary(initialOpeningBalance = 0) {
-        const expenses = await Expense.find();
+    async getMonthlySummary(initialOpeningBalance, year) {
+        if (!year) {
+            throw new Error('Year is required');
+        }
+        let expenses = await Expense.find({year})
         if (!expenses?.length) return [];
-
         const grouped = this.#groupByMonth(expenses);
-        const sorted = this.#sortByDate(grouped);
-        const withBalances = this.#applyMonthlyBalances(sorted, initialOpeningBalance);
+        const withBalances = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
         const totals = this.#calculateOverallBalances(withBalances);
 
         return {data: withBalances, ...totals};
@@ -72,14 +73,6 @@ class ExpenseServices {
 
             return acc;
         }, {});
-    }
-
-    #sortByDate(data) {
-        return Object.values(data).sort((a, b) => {
-            const dateA = new Date(`${a.year}-${a.month}-01`);
-            const dateB = new Date(`${b.year}-${b.month}-01`);
-            return dateA - dateB;
-        });
     }
 
     #applyMonthlyBalances(data, openingBalance) {

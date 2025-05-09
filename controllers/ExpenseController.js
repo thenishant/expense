@@ -1,4 +1,5 @@
 const ExpenseServices = require("../services/ExpensesServices");
+const {EXPENSES} = require("../constants/constants");
 
 const expenseServices = new ExpenseServices();
 
@@ -49,7 +50,8 @@ class ExpenseController {
 
     monthlySummary = async (req, res) => {
         try {
-            const result = await expenseServices.getMonthlySummary(475000);
+            const year = req.query.year;
+            const result = await expenseServices.getMonthlySummary(EXPENSES.BALANCE, year);
             res.status(200).json(result);
         } catch (error) {
             console.error(error.stack);
