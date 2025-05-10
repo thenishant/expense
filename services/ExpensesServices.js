@@ -45,38 +45,56 @@ class ExpenseServices {
     async getMonthlySummary(initialOpeningBalance, year) {
         if (!year) throw new Error('Year is required');
 
+        // Fetch all expenses and investment plans for the year
         const [expenses, investmentPlans] = await Promise.all([Expense.find({year}), Investment.find({year}).lean()]);
 
-        if (!expenses?.length) return [];
+        // Return empty structure if no expenses
+        if (!expenses?.length) {
+            return {
+                months: [], accountBalance: 0, mobileAccountBalance: 0, effectiveBalance: 0
+            };
+        }
 
-        const grouped = this.#groupByMonth(expenses);
-        const monthlyData = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
+        // Group expenses by month and apply balances
+        const groupedExpenses = this.#groupByMonth(expenses);
+        const monthlySummaries = this.#applyMonthlyBalances(Object.values(groupedExpenses), initialOpeningBalance);
 
+        // Map investment plans for quick lookup
         const planMap = new Map(investmentPlans.map(plan => [`${plan.year}-${plan.month}`, {
             percentToInvest: plan.investmentPercent, suggestedInvestment: plan.suggestedInvestment
         }]));
 
-        const mergedData = monthlyData.map(month => {
+        // Attach investment plan to each month's summary
+        const months = monthlySummaries.map(month => {
             const key = `${month.year}-${month.month}`;
             const plan = planMap.get(key);
 
-            if (!plan) return {...month, investmentPlan: null};
+            if (!plan) {
+                return {...month, investmentPlan: null};
+            }
 
             const percentInvested = plan.suggestedInvestment ? parseFloat(((month.investment / plan.suggestedInvestment) * 100).toFixed(1)) : null;
 
             return {
                 ...month, investmentPlan: {
-                    ...plan,
-                    percentInvested,
-                    statusColor: percentInvested == null ? "red" : percentInvested >= 100 ? "green" : percentInvested >= 50 ? "orange" : "red"
+                    ...plan, percentInvested, statusColor: this.#getStatusColor(percentInvested)
                 }
             };
         });
 
-        const totals = this.#calculateOverallBalances(mergedData);
-        return {data: mergedData, ...totals};
+        const totals = this.#calculateOverallBalances(months);
+
+        return {
+            months, ...totals
+        };
     }
 
+    async #getStatusColor(percent) {
+        if (percent == null) return 'red';
+        if (percent >= 100) return 'green';
+        if (percent >= 50) return 'orange';
+        return 'red';
+    }
 
     #groupByMonth(expenses) {
         return expenses.reduce((acc, {month, year, amount, type}) => {
