@@ -11,16 +11,6 @@ class InvestmentController {
             res.status(400).json({error: error.message});
         }
     }
-
-    async getInvestmentPlans(req, res) {
-        try {
-            const plans = await investmentServices.getAllInvestmentPlans();
-            res.status(200).json(plans);
-        } catch (error) {
-            console.error(error.stack);
-            res.status(500).json({error: error.message});
-        }
-    }
 }
 
 module.exports = {InvestmentController: InvestmentController}
