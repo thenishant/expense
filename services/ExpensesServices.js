@@ -1,5 +1,6 @@
 const moment = require("moment");
 const Expense = require("../models/ExpenseModel");
+const Investment = require('../models/InvestmentModel');
 
 class ExpenseServices {
 
@@ -42,17 +43,40 @@ class ExpenseServices {
     }
 
     async getMonthlySummary(initialOpeningBalance, year) {
-        if (!year) {
-            throw new Error('Year is required');
-        }
-        let expenses = await Expense.find({year})
-        if (!expenses?.length) return [];
-        const grouped = this.#groupByMonth(expenses);
-        const withBalances = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
-        const totals = this.#calculateOverallBalances(withBalances);
+        if (!year) throw new Error('Year is required');
 
-        return {data: withBalances, ...totals};
+        const [expenses, investmentPlans] = await Promise.all([Expense.find({year}), Investment.find({year}).lean()]);
+
+        if (!expenses?.length) return [];
+
+        const grouped = this.#groupByMonth(expenses);
+        const monthlyData = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
+
+        const planMap = new Map(investmentPlans.map(plan => [`${plan.year}-${plan.month}`, {
+            percentToInvest: plan.investmentPercent, suggestedInvestment: plan.suggestedInvestment
+        }]));
+
+        const mergedData = monthlyData.map(month => {
+            const key = `${month.year}-${month.month}`;
+            const plan = planMap.get(key);
+
+            if (!plan) return {...month, investmentPlan: null};
+
+            const percentInvested = plan.suggestedInvestment ? parseFloat(((month.investment / plan.suggestedInvestment) * 100).toFixed(1)) : null;
+
+            return {
+                ...month, investmentPlan: {
+                    ...plan,
+                    percentInvested,
+                    statusColor: percentInvested == null ? "red" : percentInvested >= 100 ? "green" : percentInvested >= 50 ? "orange" : "red"
+                }
+            };
+        });
+
+        const totals = this.#calculateOverallBalances(mergedData);
+        return {data: mergedData, ...totals};
     }
+
 
     #groupByMonth(expenses) {
         return expenses.reduce((acc, {month, year, amount, type}) => {
