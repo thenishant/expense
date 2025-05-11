@@ -12,7 +12,7 @@ class InvestmentServices {
         }
 
         const summary = await expenseServices.getMonthlySummary(EXPENSES.BALANCE, year);
-        const dataForMonth = summary.data.find(entry => entry.month === month && entry.year === year);
+        const dataForMonth = summary.months.find(entry => entry.month === month && entry.year === year);
 
         if (!dataForMonth || dataForMonth.income === 0) {
             throw new Error("Income not found for selected month");
