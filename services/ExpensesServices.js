@@ -149,8 +149,10 @@ class ExpenseServices {
         const transactions = {Expense: [], Income: [], Investment: []};
         const totalByPaymentMode = {};
 
-        allTransactions.forEach(({type, paymentMode, amount}) => {
+        allTransactions.forEach((transaction) => {
+            const {type, paymentMode, amount} = transaction;
             transactions[type].push(transaction);
+
             if (type === 'Expense' || type === 'Investment') {
                 totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
             }
