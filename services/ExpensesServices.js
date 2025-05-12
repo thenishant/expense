@@ -5,37 +5,37 @@ const Investment = require('../models/InvestmentModel');
 class ExpenseServices {
 
     async createNewExpense(req) {
-        let {type, category, subCategory, amount, desc, paymentMode} = req.body;
-        let date = moment(req.body.date).format('YYYY-MM-DD');
+        const {type, category, subCategory, amount, desc, paymentMode, date: rawDate} = req.body;
+        const date = moment(rawDate).format('YYYY-MM-DD');
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
+
         const data = {
             date, type, category, subCategory, amount, desc, ...(type === 'Expense' ? {paymentMode} : {}), month, year
         };
+
         return Expense.create(data);
     }
 
     async deleteExpense(expenseId) {
         const expense = await Expense.findById(expenseId);
-        if (!expense) {
-            throw new Error(`No expense found for ${expenseId}`);
-        }
+        if (!expense) throw new Error(`No expense found for ${expenseId}`);
         await expense.remove();
         return {message: `Expense deleted successfully for ${expenseId}`};
     }
 
     async updateExpense(req, expenseId) {
         const {type, amount, date, paymentMode, desc, category, subCategory} = req.body;
-        const expense = await Expense.findById(expenseId);
         const dateObj = new Date(date);
         const month = dateObj.toLocaleString('default', {month: 'short'});
         const year = dateObj.getFullYear().toString();
 
+        const expense = await Expense.findById(expenseId);
         Object.assign(expense, {
             type, category, subCategory, amount, desc, date, paymentMode, month, year
         });
 
-        return await expense.save();
+        return expense.save();
     }
 
     async getExpenseById(expenseId) {
@@ -45,51 +45,43 @@ class ExpenseServices {
     async getMonthlySummary(initialOpeningBalance, year) {
         if (!year) throw new Error('Year is required');
 
-        // Fetch all expenses and investment plans for the year
         const [expenses, investmentPlans] = await Promise.all([Expense.find({year}), Investment.find({year}).lean()]);
 
-        // Return empty structure if no expenses
         if (!expenses?.length) {
             return {
                 months: [], accountBalance: 0, mobileAccountBalance: 0, effectiveBalance: 0
             };
         }
 
-        // Group expenses by month and apply balances
         const groupedExpenses = this.#groupByMonth(expenses);
         const monthlySummaries = this.#applyMonthlyBalances(Object.values(groupedExpenses), initialOpeningBalance);
 
-        // Map investment plans for quick lookup
         const planMap = new Map(investmentPlans.map(plan => [`${plan.year}-${plan.month}`, {
             percentToInvest: plan.investmentPercent, suggestedInvestment: plan.suggestedInvestment
         }]));
 
-        // Attach investment plan to each month's summary
         const months = monthlySummaries.map(month => {
             const key = `${month.year}-${month.month}`;
             const plan = planMap.get(key);
 
-            if (!plan) {
-                return {...month, investmentPlan: null};
-            }
+            if (!plan) return {...month, investmentPlan: null};
 
-            const percentInvested = plan.suggestedInvestment ? parseFloat(((month.investment / plan.suggestedInvestment) * 100).toFixed(1)) : null;
+            const percentInvested = plan.suggestedInvestment ? parseFloat(((month.investment / plan.suggestedInvestment) * 100).toFixed(0)) : null;
+
+            const investmentLeft = parseFloat((plan.suggestedInvestment - month.investment).toFixed(0));
 
             return {
                 ...month, investmentPlan: {
-                    ...plan, percentInvested, statusColor: this.#getStatusColor(percentInvested)
+                    ...plan, percentInvested, investmentLeft, statusColor: this.#getStatusColor(percentInvested)
                 }
             };
         });
 
         const totals = this.#calculateOverallBalances(months);
-
-        return {
-            months, ...totals
-        };
+        return {months, ...totals};
     }
 
-    async #getStatusColor(percent) {
+    #getStatusColor(percent) {
         if (percent == null) return 'red';
         if (percent >= 100) return 'green';
         if (percent >= 50) return 'orange';
@@ -99,17 +91,18 @@ class ExpenseServices {
     #groupByMonth(expenses) {
         return expenses.reduce((acc, {month, year, amount, type}) => {
             if (!month || !year) return acc;
+
             const key = `${year}-${month}`;
+            acc[key] ??= {
+                month, year, expense: 0, income: 0, investment: 0, balance: 0, expensePercent: null
+            };
 
-            acc[key] ??= {month, year, expense: 0, income: 0, investment: 0, balance: 0, expensePercent: null};
-
-            const current = acc[key];
             const lowerType = type.toLowerCase();
-
             if (["expense", "income", "investment"].includes(lowerType)) {
-                current[lowerType] += amount;
+                acc[key][lowerType] += amount;
             }
 
+            const current = acc[key];
             current.balance = current.income - (current.expense + current.investment);
             current.expensePercent = current.income > 0 ? parseFloat(((current.expense / current.income) * 100).toFixed(1)) : null;
 
@@ -122,35 +115,42 @@ class ExpenseServices {
 
         return data.map(month => {
             const closing = balance + month.balance;
-            const result = {
-                ...month, openingBalance: balance, closingBalance: closing
-            };
+            const result = {...month, openingBalance: balance, closingBalance: closing};
             balance = closing;
             return result;
         });
     }
 
     #calculateOverallBalances(data) {
-        const accountBalance = data.reduce((sum, m) => sum + m.balance, 0);
-        const mobileAccountBalance = data.at(-1)?.closingBalance || 0;
-        const effectiveBalance = accountBalance + mobileAccountBalance;
-
-        return {accountBalance, mobileAccountBalance, effectiveBalance};
+        return data.reduce((acc, m) => {
+            acc.income += m.income;
+            acc.expense += m.expense;
+            acc.investment += m.investment;
+            acc.accountBalance += m.balance;
+            acc.mobileAccountBalance = m.closingBalance;
+            acc.effectiveBalance = acc.accountBalance + acc.mobileAccountBalance;
+            acc.amountLeftToInvest += m.investmentPlan?.investmentLeft || 0;
+            return acc;
+        }, {
+            income: 0,
+            expense: 0,
+            investment: 0,
+            accountBalance: 0,
+            mobileAccountBalance: 0,
+            effectiveBalance: 0,
+            amountLeftToInvest: 0
+        });
     }
 
     async transactions(month, year) {
-        if (!month || !year) {
-            throw new Error('month and year are required');
-        }
+        if (!month || !year) throw new Error('month and year are required');
 
         const allTransactions = await Expense.find({month, year});
         const transactions = {Expense: [], Income: [], Investment: []};
         const totalByPaymentMode = {};
 
-        allTransactions.forEach((transaction) => {
-            const {type, paymentMode, amount} = transaction;
+        allTransactions.forEach(({type, paymentMode, amount}) => {
             transactions[type].push(transaction);
-
             if (type === 'Expense' || type === 'Investment') {
                 totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
             }
@@ -174,7 +174,6 @@ class ExpenseServices {
             category, amount, percentage: `${((amount / totalExpense) * 100).toFixed(1)}%`
         }));
     }
-
 }
 
 module.exports = ExpenseServices;
