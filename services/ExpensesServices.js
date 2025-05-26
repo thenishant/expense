@@ -57,7 +57,7 @@ class ExpenseServices {
         const monthlySummaries = this.#applyMonthlyBalances(Object.values(groupedExpenses), initialOpeningBalance);
 
         const planMap = new Map(investmentPlans.map(plan => [`${plan.year}-${plan.month}`, {
-            percentToInvest: plan.investmentPercent, suggestedInvestment: plan.suggestedInvestment
+            percentToInvest: plan.investmentPercent, suggestedInvestment: Number(Number(plan.suggestedInvestment).toFixed(0))
         }]));
 
         const months = monthlySummaries.map(month => {
@@ -173,7 +173,7 @@ class ExpenseServices {
         const totalExpense = Object.values(groupedExpenses).reduce((sum, amount) => sum + amount, 0);
 
         return Object.entries(groupedExpenses).map(([category, amount]) => ({
-            category, amount, percentage: `${((amount / totalExpense) * 100).toFixed(1)}%`
+            category, amount, percentage: `${((amount / totalExpense) * 100).toFixed(1)}`
         }));
     }
 }
