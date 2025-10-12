@@ -1,33 +1,48 @@
 const CategoryModel = require("../models/CategoryModel");
 
 class CategoryService {
-    createCategory(request) {
-        const {type, category, subCategory} = request.body
-        return CategoryModel.create({type, category, subCategory})
+    async createCategory({type, category, subCategory}) {
+        return CategoryModel.create({type, category, subCategory});
     }
 
     async getAllCategories() {
-        const findAllCategories = await CategoryModel.find();
-        console.log(findAllCategories)
+        const categories = await CategoryModel.find();
 
-        return findAllCategories.reduce((result, obj) => {
-            const {type, category, subCategory} = obj;
-            if (!result[type] && !result[category]) {
-                result[type] = [];
+        // Format → Type → Category → [subCategories]
+        return categories.reduce((result, item) => {
+            const {type, category, subCategory} = item;
+
+            if (!result[type]) result[type] = {};
+            if (!result[type][category]) result[type][category] = [];
+
+            if (!result[type][category].includes(subCategory)) {
+                result[type][category].push(subCategory);
             }
-            result[type].push({type, category, subCategory});
+
             return result;
-        }, {})
+        }, {});
     }
 
     async getCategoryByName(category) {
-        try {
-            const findCategory = await CategoryModel.findOne({category})
-            return findCategory.category
-        } catch (error) {
-            console.log(`Error while fetching category by name: ${error.message}`);
+        return CategoryModel.findOne({category});
+    }
+
+    async findDuplicate({type, category, subCategory}) {
+        return CategoryModel.findOne({type, category, subCategory});
+    }
+
+    async updateCategory(id, {type, category, subCategory}) {
+        const existing = await this.findDuplicate({type, category, subCategory});
+        if (existing && existing._id.toString() !== id) {
+            throw new Error("This category + subcategory combination already exists.");
         }
+
+        return CategoryModel.findByIdAndUpdate(id, {type, category, subCategory}, {new: true, runValidators: true});
+    }
+
+    async deleteCategory(id) {
+        return CategoryModel.findByIdAndDelete(id);
     }
 }
 
-module.exports = CategoryService
+module.exports = CategoryService;
