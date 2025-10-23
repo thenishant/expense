@@ -3,11 +3,12 @@ const bodyParser = require('body-parser')
 const dotenv = require('dotenv');
 const mongoose = require("mongoose");
 
-const expenseRoute = require('./routes/ExpensesRoute')
-const categoryRoute = require("./routes/CategoryRoute");
 const budgetRoute = require("./routes/BudgetRoute");
+const expenseRoute = require('./routes/ExpensesRoute');
+const accountRouter = require("./routes/AccountRoute");
+const categoryRoute = require("./routes/CategoryRoute");
+const httpError = require('./models/HttpErrorModel');
 const investmentRoute = require("./routes/InvestmentRoute");
-const httpError = require('./models/HttpErrorModel')
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
 app.use('/api/expense', expenseRoute)
 app.use('/api/category', categoryRoute)
 app.use('/api/budget', budgetRoute)
+app.use('/api/account', accountRouter)
 app.use('/api/investment', investmentRoute)
 
 app.use((error, req, res, next) => {
