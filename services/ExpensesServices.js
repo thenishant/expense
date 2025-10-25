@@ -5,13 +5,13 @@ const Investment = require('../models/InvestmentModel');
 class ExpenseServices {
 
     async createNewExpense(req) {
-        const {type, category, subCategory, amount, desc, paymentMode, date: rawDate} = req.body;
+        const {type, category, subCategory, amount, desc, paymentMode, date: rawDate, account} = req.body;
         const date = moment(rawDate).format('YYYY-MM-DD');
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
 
         const data = {
-            date, type, category, subCategory, amount, desc, ...(type === 'Expense' ? {paymentMode} : {}), month, year
+            date, type, category, subCategory, amount, desc, account,...(type === 'Expense' ? {paymentMode} : {}), month, year
         };
 
         return Expense.create(data);
@@ -25,14 +25,14 @@ class ExpenseServices {
     }
 
     async updateExpense(req, expenseId) {
-        const {type, amount, date, paymentMode, desc, category, subCategory} = req.body;
+        const {type, amount, date, paymentMode, desc, category, subCategory, account} = req.body;
         const dateObj = new Date(date);
         const month = dateObj.toLocaleString('default', {month: 'short'});
         const year = dateObj.getFullYear().toString();
 
         const expense = await Expense.findById(expenseId);
         Object.assign(expense, {
-            type, category, subCategory, amount, desc, date, paymentMode, month, year
+            type, category, subCategory, amount, desc, date, paymentMode, account, month, year
         });
 
         return expense.save();

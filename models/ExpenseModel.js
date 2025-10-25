@@ -15,6 +15,7 @@ const expenseSchema = new schema({
     year: {type: String, required: true},
     amount: {type: Number, required: true},
     desc: {type: String, required: false},
+    account: {type: String, required: true},
     paymentMode: {type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"],}
 })
 
