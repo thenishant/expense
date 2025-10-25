@@ -1,6 +1,7 @@
 const moment = require("moment");
 const Expense = require("../models/ExpenseModel");
 const Investment = require('../models/InvestmentModel');
+const Account = require('../models/AccountModel');
 
 class ExpenseServices {
 
@@ -11,10 +12,35 @@ class ExpenseServices {
         const year = moment(date).format('YYYY');
 
         const data = {
-            date, type, category, subCategory, amount, desc, account,...(type === 'Expense' ? {paymentMode} : {}), month, year
+            date,
+            type,
+            category,
+            subCategory,
+            amount,
+            desc,
+            account, ...(type === 'Expense' ? {paymentMode} : {}),
+            month,
+            year
         };
 
-        return Expense.create(data);
+        const expense = await Expense.create(data);
+
+        if (account && type === 'Expense') {
+            const accountDoc = await Account.findOne({accountName: account});
+            if (accountDoc) {
+                accountDoc.currentBalance = accountDoc.currentBalance - Number(amount);
+                await accountDoc.save();
+            }
+        }
+
+        if (account && type === 'Income') {
+            const accountDoc = await Account.findOne({accountName: account});
+            if (accountDoc) {
+                accountDoc.currentBalance = accountDoc.currentBalance + Number(amount);
+                await accountDoc.save();
+            }
+        }
+        return expense;
     }
 
     async deleteExpense(expenseId) {
@@ -57,7 +83,8 @@ class ExpenseServices {
         const monthlySummaries = this.#applyMonthlyBalances(Object.values(groupedExpenses), initialOpeningBalance);
 
         const planMap = new Map(investmentPlans.map(plan => [`${plan.year}-${plan.month}`, {
-            percentToInvest: plan.investmentPercent, suggestedInvestment: Number(Number(plan.suggestedInvestment).toFixed(0))
+            percentToInvest: plan.investmentPercent,
+            suggestedInvestment: Number(Number(plan.suggestedInvestment).toFixed(0))
         }]));
 
         const months = monthlySummaries.map(month => {
