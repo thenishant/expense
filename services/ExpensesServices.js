@@ -2,6 +2,7 @@ const moment = require("moment");
 const Expense = require("../models/ExpenseModel");
 const Investment = require('../models/InvestmentModel');
 const Account = require('../models/AccountModel');
+const {TRANSACTION_TYPES} = require("../constants/constants");
 
 class ExpenseServices {
 
@@ -18,14 +19,14 @@ class ExpenseServices {
             subCategory,
             amount,
             desc,
-            account, ...(type === 'Expense' ? {paymentMode} : {}),
+            account, ...(type === TRANSACTION_TYPES.EXPENSE ? {paymentMode} : {}),
             month,
             year
         };
 
         const expense = await Expense.create(data);
 
-        if (account && type === 'Expense' || account && type === 'Investment') {
+        if (account && type === TRANSACTION_TYPES.EXPENSE || account && type === TRANSACTION_TYPES.INVESTMENT) {
             const accountDoc = await Account.findOne({accountName: account});
             if (accountDoc) {
                 accountDoc.currentBalance = accountDoc.currentBalance - Number(amount);
@@ -33,7 +34,7 @@ class ExpenseServices {
             }
         }
 
-        if (account && type === 'Income') {
+        if (account && type === TRANSACTION_TYPES.INCOME) {
             const accountDoc = await Account.findOne({accountName: account});
             if (accountDoc) {
                 accountDoc.currentBalance = accountDoc.currentBalance + Number(amount);
@@ -55,11 +56,11 @@ class ExpenseServices {
                 const amt = Number(amount);
 
                 switch (type) {
-                    case 'Expense':
-                    case 'Investment':
+                    case TRANSACTION_TYPES.EXPENSE:
+                    case TRANSACTION_TYPES.INVESTMENT:
                         accountDoc.currentBalance += amt;
                         break;
-                    case 'Income':
+                    case TRANSACTION_TYPES.INCOME:
                         accountDoc.currentBalance -= amt;
                         break;
                     default:
@@ -153,9 +154,9 @@ class ExpenseServices {
             };
 
             const lowerType = type.toLowerCase();
-            if (["expense", "income", "investment"].includes(lowerType)) {
-                acc[key][lowerType] += amount;
-            }
+            // if (["expense", "income", "investment"].includes(lowerType)) {
+            acc[key][lowerType] += amount;
+            // }
 
             const current = acc[key];
             current.balance = current.income - (current.expense + current.investment);
@@ -201,14 +202,14 @@ class ExpenseServices {
         if (!month || !year) throw new Error('month and year are required');
 
         const allTransactions = await Expense.find({month, year});
-        const transactions = {Expense: [], Income: [], Investment: []};
+        const transactions = {Expense: [], Income: [], Investment: [], Transfer: []};
         const totalByPaymentMode = {};
 
         allTransactions.forEach((transaction) => {
             const {type, paymentMode, amount} = transaction;
             transactions[type].push(transaction);
 
-            if (type === 'Expense' || type === 'Investment') {
+            if (type === TRANSACTION_TYPES.EXPENSE || type === TRANSACTION_TYPES.INVESTMENT) {
                 totalByPaymentMode[paymentMode] = (totalByPaymentMode[paymentMode] || 0) + amount;
             }
         });
@@ -218,7 +219,7 @@ class ExpenseServices {
 
     async transactionsCategory(month, year) {
         const transactions = await Expense.find({month, year});
-        const expenses = transactions.filter(({type}) => type === 'Expense');
+        const expenses = transactions.filter(({type}) => type === TRANSACTION_TYPES.EXPENSE);
 
         const groupedExpenses = expenses.reduce((acc, {category, amount}) => {
             acc[category] = (acc[category] || 0) + amount;

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const {TRANSACTION_TYPES} = require("../constants/constants");
 
 const schema = mongoose.Schema;
 
@@ -19,4 +20,4 @@ const expenseSchema = new schema({
     paymentMode: {type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"],}
 })
 
-module.exports = mongoose.model('Expense', expenseSchema)
+module.exports = mongoose.model(TRANSACTION_TYPES.EXPENSE, expenseSchema)
