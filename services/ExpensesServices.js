@@ -25,7 +25,7 @@ class ExpenseServices {
 
         const expense = await Expense.create(data);
 
-        if (account && type === 'Expense') {
+        if (account && type === 'Expense' || account && type === 'Investment') {
             const accountDoc = await Account.findOne({accountName: account});
             if (accountDoc) {
                 accountDoc.currentBalance = accountDoc.currentBalance - Number(amount);
@@ -46,9 +46,37 @@ class ExpenseServices {
     async deleteExpense(expenseId) {
         const expense = await Expense.findById(expenseId);
         if (!expense) throw new Error(`No expense found for ${expenseId}`);
-        await expense.remove();
-        return {message: `Expense deleted successfully for ${expenseId}`};
+
+        const {account, type, amount} = expense;
+
+        if (account) {
+            const accountDoc = await Account.findOne({accountName: account});
+            if (accountDoc) {
+                const amt = Number(amount);
+
+                switch (type) {
+                    case 'Expense':
+                    case 'Investment':
+                        accountDoc.currentBalance += amt;
+                        break;
+                    case 'Income':
+                        accountDoc.currentBalance -= amt;
+                        break;
+                    default:
+                        console.warn(`Unknown expense type: ${type}`);
+                        break;
+                }
+
+                await accountDoc.save();
+            } else {
+                console.warn(`No account found for name: ${account}`);
+            }
+        }
+
+        await Expense.deleteOne({_id: expenseId});
+        return {message: `Expense deleted successfully and balance updated for ${expenseId}`};
     }
+
 
     async updateExpense(req, expenseId) {
         const {type, amount, date, paymentMode, desc, category, subCategory, account} = req.body;
