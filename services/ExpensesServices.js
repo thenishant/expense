@@ -7,7 +7,10 @@ const {TRANSACTION_TYPES} = require("../constants/constants");
 class ExpenseServices {
 
     async createNewExpense(req) {
-        const {type, category, subCategory, amount, desc, paymentMode, date: rawDate, account} = req.body;
+        const {
+            type, category, subCategory, amount, desc, paymentMode, date: rawDate, fromAccount, toAccount
+        } = req.body;
+
         const date = moment(rawDate).format('YYYY-MM-DD');
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
@@ -19,39 +22,41 @@ class ExpenseServices {
             subCategory,
             amount,
             desc,
-            account, ...(type === TRANSACTION_TYPES.EXPENSE ? {paymentMode} : {}),
             month,
-            year
+            year,
+            fromAccount,
+            toAccount, ...(type === TRANSACTION_TYPES.EXPENSE ? {paymentMode} : {})
         };
-
         const expense = await Expense.create(data);
 
-        if (account && type === TRANSACTION_TYPES.EXPENSE || account && type === TRANSACTION_TYPES.INVESTMENT) {
-            const accountDoc = await Account.findOne({accountName: account});
-            if (accountDoc) {
-                accountDoc.currentBalance = accountDoc.currentBalance - Number(amount);
-                await accountDoc.save();
-            }
-        }
-
-        if (account && type === TRANSACTION_TYPES.INCOME) {
-            const accountDoc = await Account.findOne({accountName: account});
-            if (accountDoc) {
-                accountDoc.currentBalance = accountDoc.currentBalance + Number(amount);
-                await accountDoc.save();
-            }
+        if (type === TRANSACTION_TYPES.EXPENSE || type === TRANSACTION_TYPES.INVESTMENT) {
+            await this.updateAccountBalance(fromAccount, -amount);
+        } else if (type === TRANSACTION_TYPES.INCOME) {
+            await this.updateAccountBalance(toAccount, +amount);
+        } else if (type === TRANSACTION_TYPES.TRANSFER) {
+            await Promise.all([this.updateAccountBalance(fromAccount, -amount), this.updateAccountBalance(toAccount, +amount)]);
         }
         return expense;
+    }
+
+    async updateAccountBalance(accountName, delta) {
+        if (!accountName) return;
+
+        const accountDoc = await Account.findOne({accountName});
+        if (!accountDoc) return;
+
+        accountDoc.currentBalance = accountDoc.currentBalance + Number(delta);
+        await accountDoc.save();
     }
 
     async deleteExpense(expenseId) {
         const expense = await Expense.findById(expenseId);
         if (!expense) throw new Error(`No expense found for ${expenseId}`);
 
-        const {account, type, amount} = expense;
+        const {fromAccount, type, amount} = expense;
 
-        if (account) {
-            const accountDoc = await Account.findOne({accountName: account});
+        if (fromAccount) {
+            const accountDoc = await Account.findOne({accountName: fromAccount});
             if (accountDoc) {
                 const amt = Number(amount);
 
@@ -67,10 +72,9 @@ class ExpenseServices {
                         console.warn(`Unknown expense type: ${type}`);
                         break;
                 }
-
                 await accountDoc.save();
             } else {
-                console.warn(`No account found for name: ${account}`);
+                console.warn(`No account found for name: ${fromAccount}`);
             }
         }
 
@@ -80,14 +84,14 @@ class ExpenseServices {
 
 
     async updateExpense(req, expenseId) {
-        const {type, amount, date, paymentMode, desc, category, subCategory, account} = req.body;
+        const {type, amount, date, paymentMode, desc, category, subCategory, fromAccount} = req.body;
         const dateObj = new Date(date);
         const month = dateObj.toLocaleString('default', {month: 'short'});
         const year = dateObj.getFullYear().toString();
 
         const expense = await Expense.findById(expenseId);
         Object.assign(expense, {
-            type, category, subCategory, amount, desc, date, paymentMode, account, month, year
+            type, category, subCategory, amount, desc, date, paymentMode, fromAccount, month, year
         });
 
         return expense.save();

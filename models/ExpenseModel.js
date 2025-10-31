@@ -5,7 +5,11 @@ const schema = mongoose.Schema;
 
 const expenseSchema = new schema({
     date: {type: String, required: true},
-    type: {type: String, required: true, enum: ["Expense", "Income", "Investment"],},
+    type: {
+        type: String,
+        required: true,
+        enum: [TRANSACTION_TYPES.EXPENSE, TRANSACTION_TYPES.INCOME, TRANSACTION_TYPES.TRANSFER, TRANSACTION_TYPES.INVESTMENT]
+    },
     category: {type: String, required: true},
     subCategory: {type: String},
     month: {
@@ -16,7 +20,7 @@ const expenseSchema = new schema({
     year: {type: String, required: true},
     amount: {type: Number, required: true},
     desc: {type: String, required: false},
-    account: {type: String, required: true},
+    fromAccount: {type: String, required: true},
     paymentMode: {type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"],}
 })
 
