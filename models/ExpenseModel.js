@@ -10,8 +10,16 @@ const expenseSchema = new schema({
         required: true,
         enum: [TRANSACTION_TYPES.EXPENSE, TRANSACTION_TYPES.INCOME, TRANSACTION_TYPES.TRANSFER, TRANSACTION_TYPES.INVESTMENT]
     },
-    category: {type: String, required: true},
-    subCategory: {type: String},
+    category: {
+        type: String, required: function () {
+            return this.type !== TRANSACTION_TYPES.TRANSFER;
+        }
+    },
+    subCategory: {
+        type: String, required: function () {
+            return this.type !== TRANSACTION_TYPES.TRANSFER;
+        }
+    },
     month: {
         type: String,
         required: true,
@@ -19,9 +27,12 @@ const expenseSchema = new schema({
     },
     year: {type: String, required: true},
     amount: {type: Number, required: true},
-    desc: {type: String, required: false},
+    desc: {type: String},
     fromAccount: {type: String, required: true},
-    paymentMode: {type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"],}
-})
+    toAccount: {type: String},
+    paymentMode: {
+        type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"]
+    }
+});
 
 module.exports = mongoose.model(TRANSACTION_TYPES.EXPENSE, expenseSchema)

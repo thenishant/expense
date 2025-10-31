@@ -15,29 +15,40 @@ class ExpenseServices {
         const month = moment(date).format('MMM');
         const year = moment(date).format('YYYY');
 
+        // Remove unnecessary fields for transfer
+        const isTransfer = type === TRANSACTION_TYPES.TRANSFER;
+
         const data = {
             date,
             type,
-            category,
-            subCategory,
             amount,
             desc,
             month,
             year,
             fromAccount,
-            toAccount, ...(type === TRANSACTION_TYPES.EXPENSE ? {paymentMode} : {})
+            toAccount,
+            ...(type === TRANSACTION_TYPES.EXPENSE ? {category, subCategory, paymentMode} : {}),
+            ...(type === TRANSACTION_TYPES.INCOME ? {category, subCategory} : {}),
+            ...(type === TRANSACTION_TYPES.INVESTMENT ? {category, subCategory} : {})
         };
+
         const expense = await Expense.create(data);
 
+        // Balance logic
         if (type === TRANSACTION_TYPES.EXPENSE || type === TRANSACTION_TYPES.INVESTMENT) {
             await this.updateAccountBalance(fromAccount, -amount);
         } else if (type === TRANSACTION_TYPES.INCOME) {
             await this.updateAccountBalance(toAccount, +amount);
         } else if (type === TRANSACTION_TYPES.TRANSFER) {
-            await Promise.all([this.updateAccountBalance(fromAccount, -amount), this.updateAccountBalance(toAccount, +amount)]);
+            await Promise.all([
+                this.updateAccountBalance(fromAccount, -amount),
+                this.updateAccountBalance(toAccount, +amount)
+            ]);
         }
+
         return expense;
     }
+
 
     async updateAccountBalance(accountName, delta) {
         if (!accountName) return;
