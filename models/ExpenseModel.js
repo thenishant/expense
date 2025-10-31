@@ -31,8 +31,10 @@ const expenseSchema = new schema({
     fromAccount: {type: String, required: true},
     toAccount: {type: String},
     paymentMode: {
-        type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"]
+        type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"], required: function () {
+            return this.type === TRANSACTION_TYPES.EXPENSE || this.type === TRANSACTION_TYPES.INVESTMENT;
+        }
     }
 });
 
-module.exports = mongoose.model(TRANSACTION_TYPES.EXPENSE, expenseSchema)
+module.exports = mongoose.model(TRANSACTION_TYPES.EXPENSE, expenseSchema);
