@@ -29,7 +29,7 @@ class ExpenseServices {
             toAccount,
             ...(type === TRANSACTION_TYPES.EXPENSE ? {category, subCategory, paymentMode} : {}),
             ...(type === TRANSACTION_TYPES.INCOME ? {category, subCategory} : {}),
-            ...(type === TRANSACTION_TYPES.INVESTMENT ? {category, subCategory} : {})
+            ...(type === TRANSACTION_TYPES.INVESTMENT ? {category, subCategory, paymentMode} : {})
         };
 
         const expense = await Expense.create(data);
