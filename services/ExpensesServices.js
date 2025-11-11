@@ -95,17 +95,18 @@ class ExpenseServices {
 
 
     async updateExpense(req, expenseId) {
-        const {type, amount, date, paymentMode, desc, category, subCategory, fromAccount} = req.body;
-        const dateObj = new Date(date);
-        const month = dateObj.toLocaleString('default', {month: 'short'});
-        const year = dateObj.getFullYear().toString();
+        const body = req.body;
 
-        const expense = await Expense.findById(expenseId);
-        Object.assign(expense, {
-            type, category, subCategory, amount, desc, date, paymentMode, fromAccount, month, year
+        // Convert empty strings to null to satisfy required validations
+        Object.keys(body).forEach(key => {
+            if (body[key] === "") body[key] = null;
         });
 
-        return expense.save();
+        const dateObj = new Date(body.date);
+        body.month = dateObj.toLocaleString('default', {month: 'short'});
+        body.year = dateObj.getFullYear().toString();
+
+        return Expense.findByIdAndUpdate(expenseId, body, {new: true, runValidators: true});
     }
 
     async getExpenseById(expenseId) {
