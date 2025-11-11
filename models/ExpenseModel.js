@@ -29,9 +29,8 @@ const expenseSchema = new schema({
     amount: {type: Number, required: true},
     desc: {type: String},
     fromAccount: {
-        type: String,
-        required: function () {
-            return this.type === TRANSACTION_TYPES.EXPENSE || this.type === TRANSACTION_TYPES.INCOME || this.type === TRANSACTION_TYPES.INVESTMENT;
+        type: String, required: function () {
+            return this.type !== TRANSACTION_TYPES.TRANSFER;
         }
     },
     toAccount: {type: String},
