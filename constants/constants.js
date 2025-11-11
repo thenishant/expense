@@ -9,6 +9,13 @@ const TRANSACTION_TYPES = {
     INVESTMENT: 'Investment',
 }
 
+const PAYMENT_MODE_TYPES = {
+    CASH: "Cash",
+    CREDIT_CARD: "Credit Card",
+    BANK_ACCOUNT: "Bank Account",
+    UPI_CREDIT_CARD: "UPI Credit Card"
+}
+
 module.exports = {
-    EXPENSES, TRANSACTION_TYPES
+    EXPENSES, TRANSACTION_TYPES, PAYMENT_MODE_TYPES
 };

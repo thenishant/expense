@@ -35,7 +35,7 @@ const expenseSchema = new schema({
     },
     toAccount: {type: String},
     paymentMode: {
-        type: String, enum: ["Credit Card", "Cash", "Bank Account", "UPI Credit Card"], required: function () {
+        type: String, required: function () {
             return this.type === TRANSACTION_TYPES.EXPENSE || this.type === TRANSACTION_TYPES.INVESTMENT;
         }
     }
