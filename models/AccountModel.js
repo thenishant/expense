@@ -7,6 +7,18 @@ const accountSchema = new mongoose.Schema({
     initialBalance: {type: Number, required: true, default: 0},
     currentBalance: {type: Number, required: true, default: 0},
     accountNumber: {type: String, required: true, unique: true},
+}, {
+    versionKey: false, toJSON: {
+        virtuals: true, transform: (doc, ret) => {
+            ret.id = ret._id;
+            delete ret._id;
+        }
+    }, toObject: {
+        virtuals: true, transform: (doc, ret) => {
+            ret.id = ret._id;
+            delete ret._id;
+        }
+    }
 });
 
 module.exports = mongoose.model("Account", accountSchema);

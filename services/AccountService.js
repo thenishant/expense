@@ -33,7 +33,13 @@ class AccountService {
     async getAllAccounts() {
         const accounts = await Account.find().sort({createdAt: -1});
         if (!accounts.length) throw new Error("No accounts found.");
-        return accounts;
+        const currentBalances = accounts.map(acc => ({
+            accountName: acc.accountName, currentBalance: acc.currentBalance
+        }));
+        const totalBalance = currentBalances.reduce((sum, a) => sum + a.currentBalance, 0);
+        return {
+            accounts, currentBalances, totalBalance
+        };
     }
 
     async getAccountById(id) {
