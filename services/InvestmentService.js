@@ -21,7 +21,7 @@ class InvestmentServices {
         const investmentSuggestion = parseFloat(((percent / 100) * dataForMonth.income).toFixed(2));
 
         return Investment.findOneAndUpdate({month, year}, {
-            percent, suggestedInvestment: investmentSuggestion, income: dataForMonth.income, investmentPercent: percent
+            percent, amountToInvest: investmentSuggestion, income: dataForMonth.income, investmentPercent: percent
         }, {new: true, upsert: true});
     }
 }

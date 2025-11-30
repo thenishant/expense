@@ -5,7 +5,7 @@ const investmentSchema = new mongoose.Schema({
     year: {type: String, required: true},
     income: {type: Number, required: true},
     investmentPercent: {type: Number, required: true},
-    suggestedInvestment: {type: Number, required: true}
+    amountToInvest: {type: Number, required: true}
 });
 
 module.exports = mongoose.model('Investment', investmentSchema);
