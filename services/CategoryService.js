@@ -8,19 +8,26 @@ class CategoryService {
     async getAllCategories() {
         const categories = await CategoryModel.find();
 
-        // Format → Type → Category → [subCategories]
-        return categories.reduce((result, item) => {
-            const {type, category, subCategory} = item;
+        const grouped = categories.reduce((result, item) => {
+            const { type, category, subCategory } = item;
 
             if (!result[type]) result[type] = {};
             if (!result[type][category]) result[type][category] = [];
 
-            if (!result[type][category].includes(subCategory)) {
+            if (subCategory && !result[type][category].includes(subCategory)) {
                 result[type][category].push(subCategory);
             }
 
             return result;
         }, {});
+
+        for (const type in grouped) {
+            for (const category in grouped[type]) {
+                grouped[type][category] = grouped[type][category].filter(Boolean);
+            }
+        }
+
+        return grouped;
     }
 
     async getCategoryByName(category) {
