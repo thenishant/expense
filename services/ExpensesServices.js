@@ -104,46 +104,54 @@ class ExpenseServices {
 
         if (!expenses.length) return {months: [], yearly: {}};
 
+        // Group raw data
         const grouped = this.#groupByMonth(expenses);
         const monthsData = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
 
-        const planMap = new Map(plans.map(p => [`${p.year}-${p.month}`, {
-            percentToInvest: p.investmentPercent,
-            amountToInvest: p.amountToInvest != null ? Number(p.amountToInvest) : null
-        }]));
+        // Build investment plan lookup
+        const planMap = new Map(plans.map(p => [`${p.year}-${this.#normMonth(p.month)}`, {percentToInvest: p.investmentPercent}]));
 
+        // Build final months
         const months = monthsData.map(month => {
-            const plan = planMap.get(`${month.year}-${month.month}`);
+            const key = `${month.year}-${this.#normMonth(month.month)}`;
+            const plan = planMap.get(key);
 
+            // If no plan → no target → use actual investment as plan target
             if (!plan) {
-                const autoAmt = month.investment;
+                const inv = month.investment;
                 return this.#addIncomeDist({
                     ...month, investmentPlan: {
                         percentToInvest: 0,
-                        amountToInvest: autoAmt,
-                        percentInvested: autoAmt > 0 ? 100 : 0,
+                        amountToInvest: inv,
+                        percentInvested: inv > 0 ? 100 : 0,
                         amountLeftToInvest: 0,
+                        percentLeftToInvest: 0,
                         statusColor: "green"
                     }
                 });
             }
 
-            const amountToInvest = Math.round(plan.amountToInvest) ?? Math.round((month.income * plan.percentToInvest) / 100);
+            // Final calculation formula
+            const amountToInvest = Math.round((month.income * plan.percentToInvest) / 100);
 
             const percentInvested = amountToInvest > 0 ? Math.round((month.investment / amountToInvest) * 100) : 0;
-            const investmentLeft = amountToInvest - month.investment;
+
+            const amountLeftToInvest = Math.max(amountToInvest - month.investment, 0);
+            const percentLeftToInvest = Math.max(100 - percentInvested, 0);
 
             return this.#addIncomeDist({
                 ...month, investmentPlan: {
                     percentToInvest: plan.percentToInvest,
                     amountToInvest,
                     percentInvested,
-                    amountLeftToInvest: investmentLeft,
+                    amountLeftToInvest,
+                    percentLeftToInvest,
                     statusColor: this.#getStatusColor(percentInvested)
                 }
             });
         });
 
+        // Calculate yearly totals
         const totals = this.#calculateTotals(months);
         const charts = this.#buildCharts(months, totals);
 
@@ -160,42 +168,58 @@ class ExpenseServices {
         };
     }
 
+    /* ------------------------------------------------------
+       HELPERS — SHORT, CLEAN, OPTIMIZED
+    ------------------------------------------------------ */
+
+    #normMonth(m) {
+        // Convert "Jan", "January", "jan" → "JAN"
+        if (!m) return "";
+        return m.toString().slice(0, 3).toUpperCase();
+    }
+
     #addIncomeDist(m) {
         const income = m.income || 0;
-        const cost = m.expense + m.investment;
-        const saving = income - cost;
-        const pct = v => income > 0 ? +(v / income * 100).toFixed(1) : 0;
+        const expense = m.expense || 0;
+        const investment = m.investment || 0;
+
+        const saving = income - (expense + investment);
+        const pct = v => (income > 0 ? +(v / income * 100).toFixed(1) : 0);
+
         return {
             ...m, saving, percentages: {
-                expense: pct(m.expense), investment: pct(m.investment), saving: pct(saving), total: 100
+                expense: pct(expense), investment: pct(investment), saving: pct(saving), total: 100
             }
         };
     }
 
-    #getStatusColor(p) {
-        if (p >= 100) return "green";
-        if (p >= 50) return "orange";
+    #getStatusColor(percent) {
+        if (percent >= 100) return "green";
+        if (percent >= 50) return "orange";
         return "red";
     }
 
     #groupByMonth(items) {
         return items.reduce((acc, {month, year, amount, type}) => {
-            const key = `${year}-${month}`;
+            const key = `${year}-${this.#normMonth(month)}`;
+
             acc[key] ||= {month, year, expense: 0, income: 0, investment: 0, balance: 0};
             acc[key][type.toLowerCase()] += amount;
 
             const m = acc[key];
             m.balance = m.income - (m.expense + m.investment);
+
             return acc;
         }, {});
     }
 
     #applyMonthlyBalances(rows, opening) {
-        let bal = opening;
+        let balance = opening;
+
         return rows.map(m => {
-            const closing = bal + m.balance;
-            const out = {...m, openingBalance: bal, closingBalance: closing};
-            bal = closing;
+            const closing = balance + m.balance;
+            const out = {...m, openingBalance: balance, closingBalance: closing};
+            balance = closing;
             return out;
         });
     }
@@ -211,7 +235,7 @@ class ExpenseServices {
         }, {income: 0, expense: 0, investment: 0, accountBalance: 0, amountLeftToInvest: 0});
 
         const saving = t.income - (t.expense + t.investment);
-        const pct = v => t.income > 0 ? +(v / t.income * 100).toFixed(1) : 0;
+        const pct = v => (t.income > 0 ? +(v / t.income * 100).toFixed(1) : 0);
 
         t.saving = saving;
         t.percentages = {
@@ -221,11 +245,11 @@ class ExpenseServices {
         return t;
     }
 
-    #buildCharts(months, t) {
+    #buildCharts(months, totals) {
         return {
-            pie: [{label: "Expense", value: t.expense}, {label: "Investment", value: t.investment}, {
-                label: "Saving", value: t.saving
-            }], bar: {
+            pie: [{label: "Expense", value: totals.expense}, {
+                label: "Investment", value: totals.investment
+            }, {label: "Saving", value: totals.saving}], bar: {
                 months: months.map(m => m.month),
                 income: months.map(m => m.income),
                 expense: months.map(m => m.expense),
