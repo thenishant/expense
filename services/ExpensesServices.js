@@ -97,55 +97,56 @@ class ExpenseServices {
         return Expense.findById(expenseId);
     }
 
-
     async getMonthlySummary(initialOpeningBalance, year) {
-        if (!year) throw new Error('Year is required');
+        if (!year) throw new Error("Year is required");
 
-        const [expenses, investmentPlans] = await Promise.all([Expense.find({year}), Investment.find({year}).lean()]);
+        const [expenses, plans] = await Promise.all([Expense.find({year}), Investment.find({year}).lean()]);
 
-        if (!expenses?.length) {
-            return {months: [], yearly: {}};
-        }
+        if (!expenses.length) return {months: [], yearly: {}};
 
-        // GROUP AND CALCULATE
         const grouped = this.#groupByMonth(expenses);
-        const monthlySummaries = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
+        const monthsData = this.#applyMonthlyBalances(Object.values(grouped), initialOpeningBalance);
 
-        // MAP INVESTMENT PLANS
-        const planMap = new Map(investmentPlans.map(plan => [`${plan.year}-${plan.month}`, {
-            percentToInvest: plan.investmentPercent, amountToInvest: Number(Number(plan.amountToInvest).toFixed(0))
+        const planMap = new Map(plans.map(p => [`${p.year}-${p.month}`, {
+            percentToInvest: p.investmentPercent,
+            amountToInvest: p.amountToInvest != null ? Number(p.amountToInvest) : null
         }]));
 
-        const months = monthlySummaries.map(month => {
-            const key = `${month.year}-${month.month}`;
-            const plan = planMap.get(key);
+        const months = monthsData.map(month => {
+            const plan = planMap.get(`${month.year}-${month.month}`);
 
             if (!plan) {
-                return this.#addIncomeDistributionFields({
-                    ...month, investmentPlan: null
+                const autoAmt = month.investment;
+                return this.#addIncomeDist({
+                    ...month, investmentPlan: {
+                        percentToInvest: 0,
+                        amountToInvest: autoAmt,
+                        percentInvested: autoAmt > 0 ? 100 : 0,
+                        amountLeftToInvest: 0,
+                        statusColor: "green"
+                    }
                 });
             }
 
-            const percentInvested = plan.amountToInvest ? parseFloat(((month.investment / plan.amountToInvest) * 100).toFixed(0)) : null;
+            const amountToInvest = plan.amountToInvest ?? Math.round((month.income * plan.percentToInvest) / 100);
 
-            const investmentLeft = parseFloat((plan.amountToInvest - month.investment).toFixed(0));
+            const percentInvested = amountToInvest > 0 ? Math.round((month.investment / amountToInvest) * 100) : 0;
+            const investmentLeft = amountToInvest - month.investment;
 
-            const updated = {
+            return this.#addIncomeDist({
                 ...month, investmentPlan: {
-                    ...plan, percentInvested, investmentLeft, statusColor: this.#getStatusColor(percentInvested)
+                    percentToInvest: plan.percentToInvest,
+                    amountToInvest,
+                    percentInvested,
+                    amountLeftToInvest: investmentLeft,
+                    statusColor: this.#getStatusColor(percentInvested)
                 }
-            };
-
-            return this.#addIncomeDistributionFields(updated);
+            });
         });
 
-        // YEARLY TOTALS
-        const totals = this.#calculateOverallBalances(months);
+        const totals = this.#calculateTotals(months);
+        const charts = this.#buildCharts(months, totals);
 
-        // YEARLY CHARTS
-        const charts = this.#buildYearlyCharts(months, totals);
-
-        // FINAL RESPONSE FORMAT
         return {
             months, yearly: {
                 totals: {
@@ -159,108 +160,79 @@ class ExpenseServices {
         };
     }
 
-
-    // --------------------------------------
-    // HELPERS
-    // --------------------------------------
-
-    #addIncomeDistributionFields(month) {
-        const income = month.income || 0;
-        const expense = month.expense || 0;
-        const investment = month.investment || 0;
-        const saving = income - (expense + investment);
-
-        const calc = (v) => income > 0 ? +((v / income) * 100).toFixed(1) : null;
-
+    #addIncomeDist(m) {
+        const income = m.income || 0;
+        const cost = m.expense + m.investment;
+        const saving = income - cost;
+        const pct = v => income > 0 ? +(v / income * 100).toFixed(1) : 0;
         return {
-            ...month, saving, percentages: {
-                expense: calc(expense), investment: calc(investment), saving: calc(saving), total: 100
+            ...m, saving, percentages: {
+                expense: pct(m.expense), investment: pct(m.investment), saving: pct(saving), total: 100
             }
         };
     }
 
-
-    #getStatusColor(percent) {
-        if (percent == null) return 'red';
-        if (percent >= 100) return 'green';
-        if (percent >= 50) return 'orange';
-        return 'red';
+    #getStatusColor(p) {
+        if (p >= 100) return "green";
+        if (p >= 50) return "orange";
+        return "red";
     }
 
-
-    #groupByMonth(expenses) {
-        return expenses.reduce((acc, {month, year, amount, type}) => {
-            if (!month || !year) return acc;
-
+    #groupByMonth(items) {
+        return items.reduce((acc, {month, year, amount, type}) => {
             const key = `${year}-${month}`;
-            acc[key] ??= {
-                month, year, expense: 0, income: 0, investment: 0, balance: 0
-            };
-
-            const lower = type.toLowerCase();
-            acc[key][lower] += amount;
+            acc[key] ||= {month, year, expense: 0, income: 0, investment: 0, balance: 0};
+            acc[key][type.toLowerCase()] += amount;
 
             const m = acc[key];
             m.balance = m.income - (m.expense + m.investment);
-
             return acc;
         }, {});
     }
 
-
-    #applyMonthlyBalances(data, openingBalance) {
-        let balance = openingBalance;
-
-        return data.map(m => {
-            const closing = balance + m.balance;
-            const res = {
-                ...m, openingBalance: balance, closingBalance: closing
-            };
-            balance = closing;
-            return res;
+    #applyMonthlyBalances(rows, opening) {
+        let bal = opening;
+        return rows.map(m => {
+            const closing = bal + m.balance;
+            const out = {...m, openingBalance: bal, closingBalance: closing};
+            bal = closing;
+            return out;
         });
     }
 
-
-    #calculateOverallBalances(data) {
-        const totals = data.reduce((acc, m) => {
+    #calculateTotals(months) {
+        const t = months.reduce((acc, m) => {
             acc.income += m.income;
             acc.expense += m.expense;
             acc.investment += m.investment;
             acc.accountBalance += m.balance;
-            acc.amountLeftToInvest += m.investmentPlan?.investmentLeft || 0;
+            acc.amountLeftToInvest += m.investmentPlan?.amountLeftToInvest || 0;
             return acc;
-        }, {
-            income: 0, expense: 0, investment: 0, accountBalance: 0, amountLeftToInvest: 0
-        });
+        }, {income: 0, expense: 0, investment: 0, accountBalance: 0, amountLeftToInvest: 0});
 
-        const saving = totals.income - (totals.expense + totals.investment);
+        const saving = t.income - (t.expense + t.investment);
+        const pct = v => t.income > 0 ? +(v / t.income * 100).toFixed(1) : 0;
 
-        const calc = v => totals.income > 0 ? +((v / totals.income) * 100).toFixed(1) : null;
+        t.saving = saving;
+        t.percentages = {
+            expense: pct(t.expense), investment: pct(t.investment), saving: pct(saving), total: 100
+        };
 
+        return t;
+    }
+
+    #buildCharts(months, t) {
         return {
-            ...totals, saving, percentages: {
-                expense: calc(totals.expense), investment: calc(totals.investment), saving: calc(saving), total: 100
+            pie: [{label: "Expense", value: t.expense}, {label: "Investment", value: t.investment}, {
+                label: "Saving", value: t.saving
+            }], bar: {
+                months: months.map(m => m.month),
+                income: months.map(m => m.income),
+                expense: months.map(m => m.expense),
+                investment: months.map(m => m.investment)
             }
         };
     }
-
-
-    #buildYearlyCharts(months, totals) {
-        const pie = [{label: "Expense", value: totals.expense}, {
-            label: "Investment", value: totals.investment
-        }, {label: "Saving", value: totals.saving}];
-
-        const bar = {
-            months: months.map(m => m.month),
-            income: months.map(m => m.income),
-            expense: months.map(m => m.expense),
-            investment: months.map(m => m.investment)
-        };
-
-        return {pie, bar};
-    }
-
 
     async transactions(month, year) {
         if (!month || !year) throw new Error('month and year are required');
@@ -283,7 +255,6 @@ class ExpenseServices {
 
         return {transactions, paymentMode: totalByPaymentMode};
     }
-
 
     async transactionsCategory(month, year) {
         const transactions = await Expense.find({month, year});
