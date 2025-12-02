@@ -128,7 +128,7 @@ class ExpenseServices {
                 });
             }
 
-            const amountToInvest = plan.amountToInvest ?? Math.round((month.income * plan.percentToInvest) / 100);
+            const amountToInvest = Math.round(plan.amountToInvest) ?? Math.round((month.income * plan.percentToInvest) / 100);
 
             const percentInvested = amountToInvest > 0 ? Math.round((month.investment / amountToInvest) * 100) : 0;
             const investmentLeft = amountToInvest - month.investment;
