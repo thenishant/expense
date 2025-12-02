@@ -136,7 +136,7 @@ class ExpenseServices {
 
             const percentInvested = amountToInvest > 0 ? Math.round((month.investment / amountToInvest) * 100) : 0;
 
-            const amountLeftToInvest = Math.max(amountToInvest - month.investment, 0);
+            const amountLeftToInvest = amountToInvest - month.investment;
             const percentLeftToInvest = Math.max(100 - percentInvested, 0);
 
             return this.#addIncomeDist({
@@ -230,7 +230,7 @@ class ExpenseServices {
             acc.expense += m.expense;
             acc.investment += m.investment;
             acc.accountBalance += m.balance;
-            acc.amountLeftToInvest += m.investmentPlan?.amountLeftToInvest || 0;
+            acc.amountLeftToInvest += m.investmentPlan?.amountLeftToInvest ?? 0;
             return acc;
         }, {income: 0, expense: 0, investment: 0, accountBalance: 0, amountLeftToInvest: 0});
 
