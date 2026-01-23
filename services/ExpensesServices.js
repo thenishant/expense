@@ -6,10 +6,6 @@ const {TRANSACTION_TYPES} = require("../constants/constants");
 
 class ExpenseServices {
 
-    /* ------------------------------------------------------
-       CREATE / UPDATE / DELETE
-    ------------------------------------------------------ */
-
     async createNewExpense(req) {
         const {
             type, category, subCategory, amount, desc, paymentMode, date: rawDate, fromAccount, toAccount
@@ -81,35 +77,40 @@ class ExpenseServices {
         return Expense.findById(id);
     }
 
-    /* ------------------------------------------------------
-       SUMMARY API
-    ------------------------------------------------------ */
-
     async summary({year, month}) {
         if (!year) throw new Error("year is required");
 
-        // YEARLY
         if (!month) {
-            const openingBalance = 0; // can be fetched from account snapshot
+            const openingBalance = 0; // can be fetched later from snapshot
             return this.getMonthlySummary(openingBalance, year);
         }
 
-        // MONTHLY
         const [data] = await Expense.aggregate([{$match: {year, month}}, {
             $facet: {
-                transactions: [{$group: {_id: "$type", items: {$push: "$$ROOT"}}}],
+
+                transactions: [{
+                    $group: {
+                        _id: "$type", items: {$push: "$$ROOT"}
+                    }
+                }],
+
                 paymentMode: [{
                     $match: {
-                        type: {
-                            $in: [TRANSACTION_TYPES.EXPENSE, TRANSACTION_TYPES.INVESTMENT]
-                        }, paymentMode: {$exists: true, $ne: ""}
+                        type: {$in: [TRANSACTION_TYPES.EXPENSE, TRANSACTION_TYPES.INVESTMENT]},
+                        paymentMode: {$exists: true, $ne: ""}
                     }
-                }, {$group: {_id: "$paymentMode", amount: {$sum: "$amount"}}}],
+                }, {
+                    $group: {
+                        _id: "$paymentMode", amount: {$sum: "$amount"}
+                    }
+                }],
+
                 byFromAccount: [{$match: {fromAccount: {$exists: true, $ne: ""}}}, {
                     $group: {
                         _id: "$fromAccount", amount: {$sum: "$amount"}, count: {$sum: 1}
                     }
                 }],
+
                 byCategory: [{$match: {type: TRANSACTION_TYPES.EXPENSE}}, {
                     $group: {
                         _id: "$category", amount: {$sum: "$amount"}
@@ -121,23 +122,39 @@ class ExpenseServices {
         const transactions = {
             Expense: [], Income: [], Investment: [], Transfer: []
         };
-        data.transactions.forEach(t => transactions[t._id] = t.items);
 
-        const paymentMode = {};
-        data.paymentMode.forEach(p => paymentMode[p._id] = p.amount);
-
-        const byFromAccount = {};
-        data.byFromAccount.forEach(a => {
-            byFromAccount[a._id] = {amount: a.amount, count: a.count};
+        data.transactions.forEach(t => {
+            transactions[t._id] = t.items;
         });
 
-        const totalCat = data.byCategory.reduce((s, c) => s + c.amount, 0);
+        const paymentMode = {};
+        data.paymentMode.forEach(p => {
+            paymentMode[p._id] = p.amount;
+        });
+        const byFromAccount = {};
+        data.byFromAccount.forEach(a => {
+            byFromAccount[a._id] = {
+                amount: a.amount, count: a.count
+            };
+        });
+
+        const totalExpense = data.byCategory.reduce((s, c) => s + c.amount, 0);
         const byCategory = data.byCategory.map(c => ({
-            category: c._id, amount: c.amount, percentage: totalCat ? +(c.amount / totalCat * 100).toFixed(1) : 0
+            category: c._id,
+            amount: c.amount,
+            percentage: totalExpense ? +(c.amount / totalExpense * 100).toFixed(1) : 0
         }));
 
+        const totalIncome = transactions.Income.reduce((s, t) => s + t.amount, 0);
+        const totalInvestment = transactions.Investment.reduce((s, t) => s + t.amount, 0);
+        const balance = totalIncome - (totalExpense + totalInvestment);
+
         return {
-            scope: "MONTH", year, month, transactions, paymentMode, byFromAccount, byCategory
+            scope: "MONTH", year, month,
+            totals: {
+                expense: totalExpense, income: totalIncome, investment: totalInvestment, balance
+            },
+            transactions, paymentMode, byFromAccount, byCategory
         };
     }
 
