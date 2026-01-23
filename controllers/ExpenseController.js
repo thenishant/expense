@@ -1,5 +1,4 @@
 const ExpenseServices = require("../services/ExpensesServices");
-const {EXPENSES} = require("../constants/constants");
 
 const expenseServices = new ExpenseServices();
 
@@ -50,39 +49,13 @@ class ExpenseController {
 
     monthlySummary = async (req, res) => {
         try {
-            const year = req.query.year;
-            const result = await expenseServices.getMonthlySummary(EXPENSES.BALANCE, year);
+            const result = await expenseServices.summary(req.query);
             res.status(200).json(result);
         } catch (error) {
             console.error(error.stack);
             res.status(500).json({error: error.message});
         }
     };
-
-    transactions = async (request, response) => {
-        try {
-            const month = request.query.month;
-            const year = request.query.year;
-            const getAllTransactionsForAMonth = await expenseServices.transactions(month, year);
-            response.status(200).json(getAllTransactionsForAMonth);
-        } catch (error) {
-            console.error(error.stack);
-            response.status(500).json({error: error.message});
-        }
-    };
-
-    transactionsCategory = async (request, response) => {
-        try {
-            const month = request.query.month;
-            const year = request.query.year;
-            const getAllTransactionsForAMonth = await expenseServices.transactionsCategory(month, year);
-            response.status(200).json(getAllTransactionsForAMonth);
-        } catch (error) {
-            console.error(error.stack);
-            response.status(500).json({error: error.message});
-        }
-    };
 }
 
-
-module.exports = {ExpenseController}
+module.exports = {ExpenseController};
